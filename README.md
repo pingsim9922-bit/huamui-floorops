@@ -2,7 +2,14 @@
 
 Restaurant floor-ops simulation game for Hua Mui Kopitiam.
 
-The game now includes 5 progressive lunch-rush levels. Each level raises the sales target and increases pressure through faster customer arrivals, lower patience, more QR failures, tighter yellow-order timing, and heavier kitchen/bar delays.
+The game now includes 7 progressive lunch-rush levels. Each level raises or reshapes pressure through faster customer arrivals, lower patience, more QR failures, tighter yellow-order timing, heavier kitchen/bar delays, and late-game staff availability events.
+
+Special late-game rules:
+
+- LV.6: one random employee leaves for the toilet and disappears for 30 seconds.
+- LV.7: Son and Yu slack off for the whole level and cannot be broken up.
+
+The start screen includes a level directory, so any level can be selected directly before starting service.
 
 The current app is a pure static site:
 

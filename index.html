@@ -227,6 +227,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);
 .table.pcReady .top{box-shadow:0 4px 0 #241305,0 0 0 3px #7cc79a,0 0 16px rgba(124,199,154,.6);outline:2px dashed #7cc79a;outline-offset:4px}
 
 #hint{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);z-index:15;background:rgba(20,12,5,.95);color:#f0e2c8;font-size:12px;padding:6px 14px;border-radius:12px;border:1px solid var(--gold);white-space:nowrap;pointer-events:none;transition:opacity .3s}
+.levelGrid{display:grid;grid-template-columns:1fr;gap:6px;margin:10px 0 4px}
+.levelBtn{width:100%;text-align:left;background:#1a1008;color:var(--txt);border:1px solid #70491f;border-radius:7px;padding:7px 9px;font-size:11px;line-height:1.35;cursor:pointer;box-shadow:0 2px 0 #000}
+.levelBtn b{display:block;color:var(--gold-bright);font-size:12px}
+.levelBtn span{color:var(--dim)}
+.levelBtn.active{border-color:var(--gold-bright);background:#3a2817;box-shadow:0 0 0 2px rgba(255,210,87,.22),0 2px 0 #000}
 </style>
 </head>
 <body>
@@ -263,7 +268,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);
         <div class="rule">🔄 客人离桌，<b>连点桌子四下</b>接力翻台，计时保持绿色=Excellent！</div>
         <div class="rule">🧹 桌子亮<b>绿色虚线</b>=可预收，点一下翻台跳步；系统不会替你预收。</div>
         <div class="rule">⚖️ 收盘堆去Cleaning、收杯堆回Bar，<b>堆满会卡产线</b>要派人洗；Son和Yu聊天要打散；⚡冲刺透支体力。</div>
-        <div class="rule">🏆 <b>5 个关卡</b>逐步加压：目标更高、出客更快、扫码失败和黄单更容易爆。</div>
+        <div class="rule">🏆 <b>7 个关卡</b>逐步加压：目标更高、出客更快、员工也会出现突发状况。</div>
+        <div class="levelGrid" id="levelMenu"></div>
       </div>
       <button class="bigBtn" id="startBtn">开 始 营 业</button>
     </div>
@@ -323,16 +329,37 @@ const CFG = {
 const BASE_CFG = {...CFG};
 const LEVELS = [
   {name:"开张试营", goal:1300, spawn:[9.5,8,10], maxWait:5, cfg:{}},
-  {name:"周末午市", goal:1650, spawn:[8,6.8,8.5], maxWait:5, cfg:{waitPatience:44, qrFailRate:.18, missOrderRate:.09, yellowAt:48, blowUpAt:78}},
-  {name:"旅游团到店", goal:2000, spawn:[7,5.7,7.5], maxWait:6, cfg:{waitPatience:40, scanTime:4.8, qrFailRate:.21, cookBase:13.5, missOrderRate:.11, yellowAt:44, blowUpAt:72}},
-  {name:"雨天爆场", goal:2350, spawn:[6.2,5,6.7], maxWait:6, cfg:{waitPatience:36, qrFailRate:.25, cookBase:14.5, barBase:6, missOrderRate:.14, yellowAt:40, blowUpAt:66, flowExcellent:10, flowGood:16, flowNormal:28}},
-  {name:"冠军午市", goal:2700, spawn:[5.4,4.4,6], maxWait:7, cfg:{waitPatience:32, scanTime:5.2, qrFailRate:.3, cookBase:16, barBase:6.5, kitchenSlots:3, missOrderRate:.17, yellowAt:36, blowUpAt:60, flowExcellent:9, flowGood:14, flowNormal:24}}
+  {name:"周末午市", goal:1580, spawn:[8.4,7.1,8.8], maxWait:5, cfg:{waitPatience:45, qrFailRate:.17, missOrderRate:.09, yellowAt:49, blowUpAt:80}},
+  {name:"旅游团到店", goal:1880, spawn:[7.5,6.1,8], maxWait:6, cfg:{waitPatience:41, scanTime:4.7, qrFailRate:.2, cookBase:13.2, missOrderRate:.11, yellowAt:45, blowUpAt:74}},
+  {name:"雨天爆场", goal:2200, spawn:[6.7,5.4,7.1], maxWait:6, cfg:{waitPatience:38, qrFailRate:.23, cookBase:14, barBase:5.8, missOrderRate:.13, yellowAt:42, blowUpAt:69, flowExcellent:10.5, flowGood:16.5, flowNormal:29}},
+  {name:"冠军午市", goal:2500, spawn:[6,4.9,6.5], maxWait:7, cfg:{waitPatience:35, scanTime:5, qrFailRate:.27, cookBase:15, barBase:6.2, kitchenSlots:3, missOrderRate:.15, yellowAt:39, blowUpAt:64, flowExcellent:9.5, flowGood:15, flowNormal:26}},
+  {name:"厕所危机", goal:2650, spawn:[6.2,5.1,6.8], maxWait:7, restroom:true, cfg:{waitPatience:36, scanTime:5, qrFailRate:.27, cookBase:15, barBase:6.2, kitchenSlots:3, missOrderRate:.15, yellowAt:40, blowUpAt:66, flowExcellent:10, flowGood:16, flowNormal:28}},
+  {name:"摆烂午市", goal:2350, spawn:[7,5.8,7.6], maxWait:6, slackers:true, cfg:{waitPatience:40, qrFailRate:.22, cookBase:14, barBase:5.8, kitchenSlots:4, missOrderRate:.12, yellowAt:44, blowUpAt:72, flowExcellent:11, flowGood:17, flowNormal:30}}
 ];
 let currentLevel = 1;
 function getLevel(n=currentLevel){ return LEVELS[Math.max(0,Math.min(LEVELS.length-1,n-1))]; }
 function applyLevel(n){
   const lv=getLevel(n);
   Object.assign(CFG, BASE_CFG, lv.cfg, {salesGoal:lv.goal});
+}
+function renderLevelMenu(){
+  const menu=document.querySelector("#levelMenu");
+  if(!menu)return;
+  menu.innerHTML=LEVELS.map((lv,i)=>{
+    const n=i+1;
+    const tag=lv.restroom?" · 员工厕所30秒":lv.slackers?" · Son/Yu摆烂":"";
+    return `<button class="levelBtn ${n===currentLevel?"active":""}" data-level="${n}"><b>LV.${n} ${lv.name}</b><span>目标 RM ${lv.goal}${tag}</span></button>`;
+  }).join("");
+  menu.querySelectorAll(".levelBtn").forEach(btn=>btn.addEventListener("pointerdown",e=>{
+    e.preventDefault();
+    currentLevel=Number(btn.dataset.level);
+    newGame(currentLevel);
+    renderLevelMenu();
+    const start=document.querySelector("#startBtn");
+    if(start)start.textContent=`进 入 LV.${currentLevel}`;
+  }));
+  const start=document.querySelector("#startBtn");
+  if(start)start.textContent=`进 入 LV.${currentLevel}`;
 }
 
 /* ============================ MapData ============================ */
@@ -440,6 +467,8 @@ function newGame(level=currentLevel){
   const lv=getLevel(currentLevel);
   G = {
     t:0, running:false, over:false, level:currentLevel, levelName:lv.name, levelPassed:false,
+    restroom:lv.restroom?{armed:true, active:false, done:false, at:rnd(95,165), staff:null, left:0}:null,
+    slackers:!!lv.slackers,
     sales:0, served:0, complaints:0, sop:0, yellows:0, yellowBlown:0,
     reviews:[4,4,5,4,4],          // 开局基础评价
     flows:{E:0,G:0,N:0,P:0}, combo:0, lastFlowDone:-99, lastFlowStaff:null,
@@ -516,6 +545,14 @@ function hint(t,sticky){
 }
 function hideHint(){ const h=$("#hint"); clearTimeout(h._t); h.style.opacity=0; }
 
+function isUnavailable(s){ return s.offDuty>0 || (G&&G.slackers&&(s.id==="sa"||s.id==="sb")); }
+function releaseStaff(s){
+  if(s.task)unassign(s.task);
+  s.task=null; s.recall=null; s.state="idle"; s.phase=0; s.wp=[];
+  s.el.querySelector(".work").style.display="none";
+  s.el.querySelector(".carry").textContent="";
+}
+
 /* ============================ StaffSystem ============================ */
 /* ============================ DragSystem（拖员工派工） ============================ */
 let drag=null;
@@ -527,6 +564,7 @@ function killGhost(){
 }
 function startDragCandidate(s,e){
   if(!G.running)return;
+  if(isUnavailable(s)){ hint(s.offDuty>0?`${s.name} 去厕所了，还要 ${Math.ceil(s.offDuty)} 秒`:`${s.name} 摆烂中，本关不能派工`); return; }
   if(e.preventDefault)e.preventDefault();        // 阻止长按存图/系统手势抢走指针
   if(drag&&drag.hover)drag.hover.el.classList.remove("dropHover");
   killGhost();                                    // 清理任何未收尾的旧拖拽
@@ -585,6 +623,7 @@ function dragHitTest(mx,my){
   return null;
 }
 function dropOn(s,h){
+  if(isUnavailable(s)){ hint(`${s.name} 暂时不能派工`); return; }
   if(h.kind==="post"){
     if(s.task)unassign(s.task);
     breakChat(s);
@@ -615,6 +654,7 @@ function moveToward(e,tx,ty,spd,dt){
   e.x+=dx/d*st; e.y+=dy/d*st; return false;
 }
 function breakChat(s){
+  if(G&&G.slackers&&isChatter(s)){ say("摆烂中：Son 和 Yu 本关不会听喊话"); return; }
   if(s.state==="chatting"){
     s.state="idle"; s.idleT=0;
     const mate=G.staff.find(o=>o!==s&&o.state==="chatting");
@@ -623,6 +663,7 @@ function breakChat(s){
   }
 }
 function assign(s,task,auto){
+  if(isUnavailable(s)){ if(!auto)hint(`${s.name} 暂时不能派工`); return; }
   if(s.task){ // 救火：放回旧任务
     unassign(s.task); 
   }
@@ -648,7 +689,41 @@ function unassign(task){
     if(g.table&&g.table.state==="reserved"){ g.table.state="ready"; g.table=null; } }
   if(task.type==="guide"&&g) g.escort=null;
 }
+function taskStillValid(t){
+  if(!t)return false;
+  if(t.type==="deliver")return t.ref&&t.ref.table&&t.ref.state==="ordered";
+  if(t.type==="seat")return t.ref&&(t.ref.state==="waiting"||t.ref.state==="wandering");
+  if(t.type==="guide")return t.ref&&t.ref.state==="wandering";
+  if(t.type==="helpQR")return t.ref&&t.ref.state==="qrStuck";
+  if(t.type==="soothe"||t.type==="complain")return t.ref&&G.groups.includes(t.ref)&&t.ref.state!=="leaving";
+  if(t.type==="pcPlates")return t.ref&&t.ref.group&&t.ref.group.state==="eating";
+  if(t.type&&t.type.startsWith("flow"))return t.ref&&t.ref.state==="flow";
+  if(t.type==="checkout")return G.groups.some(g=>g.state==="paying");
+  if(t.type==="washC"||t.type==="washB")return true;
+  return true;
+}
+function rescueStuckStaff(s,dt){
+  if(!s.task)return false;
+  s.taskT=s.task===s._lastTask?(s.taskT||0)+dt:0;
+  s._lastTask=s.task;
+  if(!taskStillValid(s.task)){ removeTask(s.task); return true; }
+  if(s.state==="moving"&&(!s.wp||!s.wp.length)) buildWaypoints(s,s.task);
+  if((s.taskT||0)>55){
+    const old=s.task;
+    say(`🛠️ ${s.name} 卡住了，系统已自动重派 ${taskName(old)}`);
+    removeTask(old);
+    return true;
+  }
+  return false;
+}
 function staffTick(s,dt){
+  if(s.offDuty>0){
+    s.offDuty=Math.max(0,s.offDuty-dt);
+    s.state="off";
+    if(s.offDuty<=0){ s.state="idle"; s.x=s.home.x; s.y=s.home.y; say(`🚻 ${s.name} 回来了，可以继续派工`); }
+    return;
+  }
+  if(G.slackers&&isChatter(s)){ s.state="chatting"; s.task=null; return; }
   // 眩晕
   if(s.stunT>0){ s.stunT-=dt; s.el.classList.add("stun"); if(s.stunT<=0)s.el.classList.remove("stun"); return; }
   s.stunCd=Math.max(0,s.stunCd-dt);
@@ -656,7 +731,7 @@ function staffTick(s,dt){
   if(s.state==="working"||s.state==="moving") s.stamina=Math.max(0,s.stamina-(s.state==="working"?3.6:1.4)*dt*(chatActive()&&!isChatter(s)?1.8:1));
   else s.stamina=Math.min(100,s.stamina+(s.state==="chatting"?7:5)*dt);
 
-  if(s.task){ taskStep(s,dt); s.idleT=0; return; }
+  if(s.task){ if(rescueStuckStaff(s,dt))return; taskStep(s,dt); s.idleT=0; return; }
   if(s.state==="chatting") return; // ChatSystem 控制
   // 空闲：回顶岗点或自己岗位
   s.idleT+=dt;
@@ -695,7 +770,7 @@ function addTask(t){
   return t;
 }
 function nearestIdle(x,y,inclPosts){
-  const cands=G.staff.filter(s=>!s.task&&s.state==="idle"&&s.stunT<=0&&!s.recall
+  const cands=G.staff.filter(s=>!isUnavailable(s)&&!s.task&&s.state==="idle"&&s.stunT<=0&&!s.recall
     &&(inclPosts||(s.id!=="host"&&s.id!=="cash")));
   if(!cands.length)return null;
   cands.sort((a,b)=>dist(a,{x,y})-dist(b,{x,y}));
@@ -887,6 +962,22 @@ function stationTick(){
   }
 }
 
+/* ============================ SpecialLevelEvents ============================ */
+function specialTick(dt){
+  const r=G.restroom;
+  if(r&&r.armed&&!r.done&&G.t>=r.at){
+    const cands=G.staff.filter(s=>!isUnavailable(s));
+    if(cands.length){
+      const s=pick(cands);
+      releaseStaff(s);
+      s.offDuty=30;
+      r.armed=false; r.active=true; r.done=true; r.staff=s.id; r.left=30;
+      say(`🚻 ${s.name} 去上厕所了，30 秒后回来！先重新调度其他员工`);
+      pop(s.x,s.y,"🚻 30s","bad");
+    }
+  }
+}
+
 /* ============================ AutoDutySystem ============================ */
 /* 全员自动工作：
    - Host 岗 / Cashier 岗：0.6 秒反应，自动带位 / 自动结账（谁站岗谁做）
@@ -898,7 +989,7 @@ function stationTick(){
    手动派单没有任何延迟，主管永远比系统快。 */
 function autoTick(dt){
   G.tasks.forEach(t=>t.age=(t.age||0)+dt);
-  const idleAt=p=>G.staff.find(s=>!s.task&&s.state==="idle"&&s.stunT<=0&&dist(s,p)<9);
+  const idleAt=p=>G.staff.find(s=>!isUnavailable(s)&&!s.task&&s.state==="idle"&&s.stunT<=0&&dist(s,p)<9);
   // 岗位自动
   const seatT=G.tasks.find(t=>t.type==="seat"&&!t.assignee&&t.age>0.6);
   if(seatT){ const s=idleAt(POS.host); if(s)assign(s,seatT,true); }
@@ -914,7 +1005,7 @@ function autoTick(dt){
       if(t.ref.flowStep!==step-1) continue;              // 只接当前解锁步
       if(G.t-(t.ref.flowStepAt||0)<4.5) continue;        // 解锁后 4.5 秒才自动来，抢先接力靠你
     }
-    const cands=G.staff.filter(s=>!s.task&&s.state==="idle"&&s.stunT<=0&&!s.recall
+    const cands=G.staff.filter(s=>!isUnavailable(s)&&!s.task&&s.state==="idle"&&s.stunT<=0&&!s.recall
       &&s.id!=="host");
     if(!cands.length)break;
     const anchor=t.from||{x:t.x,y:t.y};
@@ -1103,7 +1194,7 @@ function killGroup(g){
 
 /* Host 是否在岗（任何空闲员工站在 Host 台附近即算） */
 function hostOnDuty(){
-  return G.staff.some(s=>s.state==="idle"&&s.stunT<=0&&dist(s,POS.host)<9);
+  return G.staff.some(s=>!isUnavailable(s)&&s.state==="idle"&&s.stunT<=0&&dist(s,POS.host)<9);
 }
 /* 带位工单：有等位客 + 有 Ready 桌 时出现 */
 function refreshSeatTasks(){
@@ -1229,6 +1320,17 @@ function yellowTick(){
 function chatTick(dt){
   const a=G.staff.find(s=>s.id==="sa"), b=G.staff.find(s=>s.id==="sb");
   const chip=$("#chatAlert");
+  if(G.slackers){
+    a.state="chatting"; b.state="chatting";
+    const mx=(POS.drink.x+POS.clean.x)/2, my=POS.drink.y+8;
+    moveToward(a,mx-3,my,18,dt); moveToward(b,mx+3,my,18,dt);
+    setChatBub(a,true); setChatBub(b,true);
+    chip.textContent="⚠️ Son 和 Yu 摆烂中 · 本关不能打散";
+    chip.style.display="block";
+    if(!G._slackWarn||G.t-G._slackWarn>14){ G._slackWarn=G.t; say("⚠️ LV.7：Son 和 Yu 摆烂，本关只能靠 4 名员工撑住"); }
+    return;
+  }
+  chip.textContent="⚠️ 员工扎堆聊天 · 点此打散";
   if(a.state==="chatting"&&b.state==="chatting"){
     const mx=(POS.drink.x+POS.clean.x)/2, my=POS.drink.y+8;
     moveToward(a,mx-3,my,20,dt); moveToward(b,mx+3,my,20,dt);
@@ -1245,6 +1347,7 @@ function chatTick(dt){
 }
 $("#chatAlert").addEventListener("pointerdown",()=>{
   if(!G||!G.running)return;
+  if(G.slackers){ hint("LV.7 摆烂状态不能打散，只能重新调度其他员工"); return; }
   G.staff.forEach(s=>breakChat(s));
   $("#chatAlert").style.display="none";
 });
@@ -1272,6 +1375,11 @@ document.querySelectorAll(".skill").forEach(el=>{
     const k=el.dataset.sk;
     if(G.skills[k]>0)return;
     G.skills[k]=SK[k].cd;
+    if(k==="split"&&G.slackers){
+      G.staff.forEach(s=>{ if(!isChatter(s)){ breakChat(s); s.stamina=Math.min(100,s.stamina+12); } });
+      say("🗣️ 主管喊话：其他人回神，Son 和 Yu 继续摆烂");
+      return;
+    }
     if(k==="split"){ G.staff.forEach(s=>{breakChat(s); s.stamina=Math.min(100,s.stamina+12);}); say("🗣️ 主管喊话：都别聊了！全员回神 +体力"); }
     if(k==="rush"){ G.boost=10; G.staff.forEach(s=>s.stamina=Math.max(5,s.stamina-12)); say("⚡ 全员冲刺 10 秒！（透支体力 -12）"); }
     if(k==="calm"){ G.groups.forEach(g=>{g.patience=Math.min(g.patienceMax,g.patience+22);g.sat=Math.min(100,g.sat+10);}); say("🧯 主管逐桌打招呼，全场客人+耐心+满意度"); }
@@ -1290,6 +1398,8 @@ function skillTick(dt){
 /* ============================ Renderer / Deck / HUD ============================ */
 function renderPawns(){
   G.staff.forEach(s=>{
+    s.el.style.display=s.offDuty>0?"none":"";
+    s.el.style.opacity=(G.slackers&&isChatter(s))?".45":"";
     s.el.style.left=s.x+"%"; s.el.style.top=s.y+"%";
     if(!s.stbarEl)s.stbarEl=s.el.querySelector(".stbar i");
     s.stbarEl.style.width=s.stamina+"%";
@@ -1402,7 +1512,7 @@ function loop(ts){
       }
       G.staff.forEach(s=>staffTick(s,dt));
       G.groups.slice().forEach(g=>custTick(g,dt));
-      kitchenTick(dt); yellowTick(); chatTick(dt); skillTick(dt); autoTick(dt); stationTick();
+      kitchenTick(dt); yellowTick(); specialTick(dt); chatTick(dt); skillTick(dt); autoTick(dt); stationTick();
       refreshSeatTasks();
       G.tables.forEach(tb=>{ if(tb.state==="flow")updateFlowTag(tb); });
       renderBadges();
@@ -1426,7 +1536,7 @@ function againGame(){
   say(`🔔 LV.${G.level} ${G.levelName} 开始！`);
 }
 ["pointerdown","click"].forEach(ev=>$("#againBtn").addEventListener(ev,()=>againGame()));
-try{ newGame(); }catch(e){ window.dispatchEvent(new ErrorEvent("error",{message:"newGame失败: "+e.message})); }
+try{ newGame(); renderLevelMenu(); }catch(e){ window.dispatchEvent(new ErrorEvent("error",{message:"newGame失败: "+e.message})); }
 requestAnimationFrame(loop);
 
 </script>
