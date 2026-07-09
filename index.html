@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>HUA MUI FLOW MASTER · KOPITIAM</title>
+<style>
+:root{
+  --bg:#120c07;            /* 最深底色 */
+  --panel:#2b1c10;         /* 面板深木 */
+  --panel2:#3a2817;
+  --gold:#e8a33d;          /* 金边 */
+  --gold-bright:#ffd257;
+  --red:#b93a24;           /* 红色横幅 */
+  --red-deep:#8c2415;
+  --cream:#f4e3c1;         /* 纸/工单 */
+  --cream-edge:#c9a86a;
+  --ink:#2b1c10;
+  --txt:#f0e2c8;
+  --dim:#b39a72;
+  --green:#58c470;
+  --amber:#f5b301;
+  --sel:#6fd7ff;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+html,body{height:100%;overflow:hidden;background:var(--bg);
+  font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;color:var(--txt);touch-action:manipulation}
+#app{height:100%;max-width:520px;margin:0 auto;display:flex;flex-direction:column;position:relative;background:var(--bg)}
+
+/* 金边像素面板通用 */
+.gpanel{background:var(--panel);border:2px solid var(--gold);border-radius:6px;
+  box-shadow:0 0 0 2px #1a1008, inset 0 0 0 1px #503418, 0 3px 0 #000}
+
+/* ---------- HUD ---------- */
+#hud{display:flex;gap:5px;padding:6px 6px 3px;align-items:stretch;z-index:30}
+#logo{flex:0 0 auto;text-align:center;padding:3px 7px;background:linear-gradient(#3a2817,#241608);border:2px solid var(--gold);border-radius:6px;line-height:1.05}
+#logo b{display:block;font-size:11px;color:var(--gold-bright);letter-spacing:.5px;font-weight:900;text-shadow:1px 1px 0 #5c3410,2px 2px 0 #000}
+#logo span{font-size:7px;color:var(--dim);letter-spacing:2px}
+.chip{flex:1;background:var(--panel);border:2px solid var(--gold);border-radius:6px;padding:2px 4px;text-align:center;display:flex;flex-direction:column;justify-content:center}
+.chip b{font-size:13px;font-variant-numeric:tabular-nums;color:var(--gold-bright);letter-spacing:.5px}
+.chip span{font-size:7.5px;color:var(--dim);letter-spacing:1.5px}
+.chip b.hot{color:#ff7a5c}
+#goalRow{display:flex;align-items:center;gap:6px;padding:3px 8px 4px;font-size:9.5px;color:var(--dim);z-index:29}
+#goalRow .bar{flex:1;height:8px;background:#1a1008;border:1px solid #503418;border-radius:4px;overflow:hidden}
+#goalRow .bar i{display:block;height:100%;background:linear-gradient(90deg,#4f8f3f,var(--green));width:0%}
+#goalRow b{color:var(--gold-bright);font-size:10px}
+#ticker{background:#1a1008;border-top:1px solid #3a2817;border-bottom:2px solid #3a2817;color:#d8c49a;font-size:10.5px;padding:3px 10px;white-space:nowrap;overflow:hidden;height:20px;line-height:14px;z-index:28}
+
+/* ---------- MAP ---------- */
+#mapWrap{flex:1;position:relative;overflow:hidden;border-top:2px solid var(--gold);border-bottom:2px solid var(--gold)}
+#map{position:absolute;inset:0;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255,190,90,.08), transparent 45%),
+    repeating-linear-gradient(0deg, #46331f 0 12px, #3f2d1b 12px 24px),
+    repeating-linear-gradient(90deg, transparent 0 64px, rgba(0,0,0,.18) 64px 66px),
+    #46331f}
+.station{position:absolute;transform:translate(-50%,-50%);text-align:center;z-index:2}
+.station .box{background:#241608;border:2px solid #6d4a22;border-radius:6px;padding:5px 9px;font-size:17px;color:#f0e2c8;line-height:1.05;box-shadow:0 2px 0 #000, inset 0 0 8px rgba(0,0,0,.5)}
+.station .lbl{font-size:8.5px;color:#caa96c;letter-spacing:1px;margin-top:2px;display:block;text-shadow:1px 1px 0 #000}
+.station.decor .box{opacity:.65}
+.station .pileN{position:absolute;top:-9px;right:-9px;background:var(--green);color:#fff;font-size:10px;font-weight:900;min-width:17px;border-radius:9px;padding:1px 4px;border:1.5px solid #241608;text-align:center}
+.station .pileN.warn{background:var(--amber);color:#4a3000;animation:pulse2 .9s infinite}
+.station .pileN.bad{background:var(--red);color:#ffe8c8;animation:pulse2 .5s infinite}
+.station .box{position:relative}
+.station{overflow:visible}
+
+.station .pile{position:absolute;top:-10px;right:-14px;background:var(--cream);color:var(--ink);font-size:8.5px;font-weight:900;border:1.5px solid var(--gold);border-radius:8px;padding:0 5px;white-space:nowrap;box-shadow:0 2px 0 rgba(0,0,0,.4)}
+.station .pile.full{background:var(--red);color:#ffe8c8;border-color:var(--gold-bright);animation:pulse2 .6s infinite}
+
+.station.post .box{border-color:var(--gold);cursor:pointer;box-shadow:0 2px 0 #000, 0 0 8px rgba(232,163,61,.35)}
+.station.post{z-index:4;pointer-events:auto}
+
+.table{position:absolute;transform:translate(-50%,-50%);width:78px;height:64px;z-index:3;text-align:center}
+.table::after{content:"";position:absolute;inset:-12px}  /* 隐形点击热区 */
+.table .top{width:68px;height:46px;margin:0 auto;border-radius:8px;background:linear-gradient(160deg,#96682f,#5c3a18);border:2px solid #2e1b09;box-shadow:0 4px 0 #241305,0 6px 8px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;position:relative;transition:box-shadow .25s}
+.table .top::after{content:"";position:absolute;left:-11px;top:50%;width:7px;height:18px;transform:translateY(-50%);background:#3a2314;border-radius:2px;box-shadow:79px 0 0 #3a2314}  /* 两侧板凳 */
+.table .num{position:absolute;top:-9px;left:-9px;background:#241608;color:var(--gold-bright);font-size:11px;font-weight:800;padding:1px 6px;border-radius:6px;border:1.5px solid var(--gold);line-height:1.5;z-index:2}
+.table .items{font-size:15px;letter-spacing:-2px;pointer-events:none}
+.table.ready .top{box-shadow:0 3px 0 #241305,0 0 0 2px var(--green),0 0 10px rgba(88,196,112,.6)}
+.table.dirty .top{filter:brightness(.7) saturate(.7)}
+.table.yellow .top{box-shadow:0 3px 0 #241305,0 0 0 2px var(--amber),0 0 12px var(--amber)}
+.table .flowTag{position:absolute;bottom:-12px;left:50%;transform:translateX(-50%);font-size:9px;background:#241608;color:#9fe3b8;padding:1px 6px;border-radius:5px;white-space:nowrap;border:1px solid #503418;z-index:2}
+
+/* 顾客与员工 */
+.pawn{position:absolute;transform:translate(-50%,-50%);z-index:6;text-align:center;pointer-events:none}
+.pawn .face{font-size:17px;line-height:1;filter:drop-shadow(0 2px 2px rgba(0,0,0,.6))}
+.pawn .tag{font-size:7px;background:rgba(20,12,5,.9);color:#e8d8b8;border-radius:4px;padding:0 3px;margin-top:1px;display:inline-block;white-space:nowrap;border:1px solid #503418}
+.pawn .bub{position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:11px;background:var(--cream);border-radius:6px;padding:0 3px;border:1.5px solid var(--cream-edge);white-space:nowrap;box-shadow:0 2px 3px rgba(0,0,0,.5)}
+.pawn .pbar{width:30px;height:4px;background:#140c05;border-radius:2px;margin:2px auto 0;overflow:hidden;border:1px solid #503418}
+.pawn .pbar i{display:block;height:100%;background:var(--green);transition:width .3s}
+.pawn .pbar i.low{background:#ff5c39}
+
+.staff{pointer-events:auto;cursor:pointer;z-index:8}
+.staff .ava{width:28px;height:28px;border-radius:6px;background:linear-gradient(#4a3320,#241608);display:flex;align-items:center;justify-content:center;font-size:16px;border:2px solid #7a5528;box-shadow:0 2px 0 #000;transition:border-color .15s;margin:0 auto}
+.staff.sel .ava{border-color:var(--sel);box-shadow:0 0 0 2px rgba(111,215,255,.4),0 0 12px var(--sel)}
+.staff.stun .ava{border-color:var(--amber);animation:shake .3s infinite}
+.staff .carry{position:absolute;top:-8px;right:-6px;font-size:13px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
+.staff .work{position:absolute;top:-7px;left:50%;transform:translateX(-50%);width:30px;height:5px;background:#140c05;border-radius:3px;overflow:hidden;border:1px solid var(--gold)}
+.staff .work i{display:block;height:100%;background:var(--gold-bright)}
+@keyframes shake{0%,100%{transform:translate(-50%,-50%) rotate(0)}25%{transform:translate(-50%,-50%) rotate(-7deg)}75%{transform:translate(-50%,-50%) rotate(7deg)}}
+
+/* 工单 chit */
+.chit{position:absolute;transform:translate(-50%,-105%);z-index:12;background:var(--cream);border:2px solid var(--cream-edge);border-radius:6px;padding:3px 6px;font-size:10.5px;line-height:1.2;text-align:center;cursor:pointer;box-shadow:1px 3px 0 rgba(0,0,0,.55);min-width:48px;pointer-events:auto;color:var(--ink);font-weight:700}
+.chit::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--green);border-radius:4px 4px 0 0}
+.chit .ico{font-size:15px;display:block}
+.chit.pulse{animation:pulse 1s infinite}
+.chit.assigned{opacity:.5;filter:saturate(.4)}
+.chit.locked::before{background:#b9b2a2}
+.chit.locked{color:#9a8a6a}
+.chit.warn::before{background:var(--amber)}
+.chit.bad::before{background:var(--red)}
+.chit.bad{animation:pulse .6s infinite}
+.chit .who{position:absolute;right:-6px;top:-8px;font-size:11px}
+@keyframes pulse{0%,100%{transform:translate(-50%,-105%) scale(1)}50%{transform:translate(-50%,-105%) scale(1.09)}}
+.chit.optional{background:#eaf2df;border-style:dashed}
+.chit.optional::before{background:#7cc79a}
+
+/* 顶部警示条 */
+.alertChip{position:absolute;z-index:22;font-size:10px;font-weight:800;border-radius:6px;padding:4px 8px;display:none;letter-spacing:.5px;box-shadow:0 3px 0 #000;border:2px solid var(--gold)}
+#yellowAlert{left:6px;top:6px;background:var(--amber);color:#4a3000}
+#chatAlert{right:6px;top:6px;background:var(--red);color:#ffe8c8;cursor:pointer;pointer-events:auto;animation:pulse2 .8s infinite}
+@keyframes pulse2{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+
+.pop{position:absolute;transform:translate(-50%,-50%);z-index:40;font-weight:900;font-size:12px;color:var(--gold-bright);text-shadow:1px 1px 0 #000,2px 2px 0 rgba(0,0,0,.5);animation:rise 1.3s forwards;pointer-events:none;white-space:nowrap}
+.pop.good{color:#8dffb0}.pop.bad{color:#ff8d6e}.pop.combo{font-size:15px;color:var(--sel)}
+@keyframes rise{0%{opacity:0;margin-top:6px}15%{opacity:1}100%{opacity:0;margin-top:-28px}}
+
+/* ---------- 底部 ---------- */
+#skills{display:flex;gap:7px;padding:6px 8px 9px;z-index:20}
+.skill{flex:1;background:var(--panel);border:2px solid var(--gold);color:var(--txt);border-radius:8px;padding:7px 2px;font-size:11px;text-align:center;position:relative;overflow:hidden;cursor:pointer;box-shadow:0 2px 0 #000}
+.skill b{display:block;font-size:14px}
+.skill .cd{position:absolute;inset:0;background:rgba(10,6,2,.8);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--gold-bright)}
+
+
+/* ---------- 覆盖层：红幅+金边面板 ---------- */
+.overlay{position:absolute;inset:0;background:rgba(8,5,2,.92);z-index:100;display:flex;align-items:center;justify-content:center;padding:18px}
+.panel{background:var(--panel);border:3px solid var(--gold);border-radius:10px;padding:0 0 16px;max-width:380px;width:100%;box-shadow:0 0 0 3px #1a1008,0 14px 40px rgba(0,0,0,.7);max-height:94%;overflow-y:auto}
+.ribbon{background:linear-gradient(#c8462c,var(--red-deep));border-bottom:3px solid var(--gold);padding:9px 14px;border-radius:7px 7px 0 0;text-align:center}
+.ribbon h1{font-size:17px;color:var(--gold-bright);letter-spacing:1px;text-shadow:1px 1px 0 #000,2px 2px 0 #5c1408;font-weight:900}
+.ribbon h2{font-size:10px;color:#ffd8b0;font-weight:400;letter-spacing:2px;margin-top:2px}
+.pbody{padding:12px 15px 0}
+.rule{font-size:12px;line-height:1.7;margin-bottom:6px;color:var(--txt)}
+.rule b{color:var(--gold-bright)}
+.bigBtn{display:block;touch-action:manipulation;width:calc(100% - 30px);margin:14px auto 0;background:linear-gradient(#d4562e,var(--red-deep));color:#ffe8c8;border:2px solid var(--gold);border-radius:9px;padding:12px;font-size:15px;font-weight:900;letter-spacing:4px;cursor:pointer;box-shadow:0 4px 0 #000;text-shadow:1px 1px 0 #5c1408}
+.bigBtn:active{transform:translateY(3px);box-shadow:0 1px 0 #000}
+
+/* 结算 */
+#gradeWrap{text-align:center;margin:8px 0 4px}
+#gradeBox{font-size:58px;font-weight:900;line-height:1;color:var(--gold-bright);text-shadow:2px 2px 0 #5c3410,4px 4px 0 #000;display:inline-block}
+#gradeWord{font-size:11px;letter-spacing:4px;color:var(--dim);margin-top:2px}
+.scoreRows{margin:8px 0 4px}
+.scoreRows div{display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:2.5px 2px;border-bottom:1px dashed #503418;color:#d8c49a}
+.scoreRows .stars{color:var(--gold-bright);letter-spacing:1px;font-size:11px}
+.resultNums{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:11px;margin-top:8px;color:#d8c49a}
+.resultNums div{display:flex;justify-content:space-between;border-bottom:1px dashed #503418;padding:2px 0}
+.resultNums b{color:var(--gold-bright);font-variant-numeric:tabular-nums}
+
+/* 桌子可点 + 单徽章 */
+.table{pointer-events:auto;cursor:pointer}
+.tbadge{position:absolute;left:50%;top:-6px;transform:translate(-50%,-100%);z-index:11;background:var(--cream);border:2px solid var(--cream-edge);border-radius:6px;padding:4px 7px 2px;display:flex;align-items:center;gap:3px;font-size:10.5px;font-weight:800;color:var(--ink);box-shadow:1px 3px 0 rgba(0,0,0,.55);white-space:nowrap;pointer-events:none}
+.tbadge::before{content:"";position:absolute;top:0;left:0;right:0;height:3.5px;background:var(--green);border-radius:4px 4px 0 0}
+.tbadge b{font-size:14px;font-weight:400;line-height:1}
+.tbadge i{font-style:normal;background:#3f8f4f;color:#fff;border-radius:4px;padding:0 4px;font-size:9px;margin-left:2px}
+.tbadge.warn::before{background:var(--amber)}
+.tbadge.bad::before{background:var(--red)}
+.tbadge.opt{background:#eaf2df;border-style:dashed}
+.tbadge.opt::before{background:#7cc79a}
+.tbadge.asg{opacity:.72}
+.tbadge.pulse,.tbadge.bad{animation:bpulse 1s infinite}
+.tbadge.bad{animation-duration:.55s}
+@keyframes bpulse{0%,100%{transform:translate(-50%,-100%) scale(1)}50%{transform:translate(-50%,-100%) scale(1.12)}}
+/* picking 模式高亮可点目标 */
+#map.picking .table.hasOpen .top{box-shadow:0 4px 0 #241305,0 0 0 3px var(--sel),0 0 16px rgba(111,215,255,.7);animation:selglow 1s infinite}
+#map.picking .chit.pulse{box-shadow:1px 2px 0 rgba(0,0,0,.55),0 0 10px var(--sel)}
+@keyframes selglow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.25)}}
+/* 像素小人 */
+.spr{width:29px;height:40px;image-rendering:pixelated;display:inline-block;filter:drop-shadow(0 2px 2px rgba(0,0,0,.55))}
+.spr.c{width:20px;height:28px;margin:0 -2px}
+.staff .ava{width:33px;height:43px;background:none;border:none;box-shadow:none;border-radius:5px;display:flex;align-items:flex-end;justify-content:center}
+.staff.sel .ava{background:rgba(111,215,255,.18);box-shadow:0 0 0 2px var(--sel),0 0 12px var(--sel);border:none}
+.staff.stun .ava{border:none}
+.pawn .face{display:flex;align-items:flex-end;justify-content:center}
+.pawn .tag{font-size:8px}
+/* 任务总览栏 */
+#taskbar{display:flex;gap:5px;padding:5px 8px;background:#1a1008;border-bottom:2px solid var(--gold);font-size:10.5px;color:#caa96c;z-index:20}
+#taskbar span{background:var(--panel);border:1px solid #503418;border-radius:5px;padding:2px 4px;flex:1;text-align:center;white-space:nowrap}
+#taskbar b{color:var(--gold-bright)}
+#taskbar span.w{border-color:var(--amber);color:#ffd88a}
+#taskbar span.r{border-color:var(--red);color:#ff9d7e;animation:pulse2 .8s infinite}
+
+
+/* ===== 拖拽 ===== */
+#dragGhost{position:fixed;z-index:999;pointer-events:none;transform:translate(-50%,-85%);text-align:center;filter:drop-shadow(0 5px 10px rgba(0,0,0,.7))}
+#dragGhost .spr{width:38px;height:52px}
+#dragGhost span{display:block;font-size:10px;font-weight:800;color:var(--gold-bright);text-shadow:1px 1px 0 #000;background:rgba(20,12,5,.85);border-radius:5px;padding:0 5px;margin-top:1px}
+#map.dragging .table.hasOpen .top{box-shadow:0 4px 0 #241305,0 0 0 3px var(--sel),0 0 18px rgba(111,215,255,.75)}
+#map.dragging .station{overflow:visible}
+
+.station .pile{position:absolute;top:-10px;right:-14px;background:var(--cream);color:var(--ink);font-size:8.5px;font-weight:900;border:1.5px solid var(--gold);border-radius:8px;padding:0 5px;white-space:nowrap;box-shadow:0 2px 0 rgba(0,0,0,.4)}
+.station .pile.full{background:var(--red);color:#ffe8c8;border-color:var(--gold-bright);animation:pulse2 .6s infinite}
+
+.station.post .box{box-shadow:0 2px 0 #000,0 0 0 2px var(--gold-bright),0 0 14px rgba(255,210,87,.6)}
+#map.dragging .chit.pulse{box-shadow:1px 3px 0 rgba(0,0,0,.55),0 0 12px var(--sel)}
+.table.dropHover .top{outline:3px solid var(--gold-bright);outline-offset:2px;filter:brightness(1.3)}
+.station.dropHover .box{outline:3px solid var(--gold-bright);filter:brightness(1.4)}
+.chit.dropHover{transform:translate(-50%,-105%) scale(1.2)!important;outline:2px solid var(--gold-bright)}
+.staff{touch-action:none;-webkit-touch-callout:none}
+.spr{-webkit-user-drag:none;-webkit-touch-callout:none;user-select:none}
+
+.staff .stbar{width:30px;height:4px;background:#140c05;border-radius:2px;margin:1px auto 0;overflow:hidden;border:1px solid #503418}
+.staff .stbar i{display:block;height:100%;background:var(--green)}
+.staff .stbar i.mid{background:var(--amber)}
+.staff .stbar i.low{background:#ff5c39;animation:blinkc .5s infinite alternate}
+
+/* ===== 翻台四格进度条（画在桌面上） ===== */
+.table .steps{position:absolute;left:5px;right:5px;bottom:4px;height:8px;display:flex;gap:2px;z-index:2}
+.table .steps i{flex:1;background:#241305;border:1px solid #3a2314;border-radius:2px}
+.table .steps i.done{background:var(--green);border-color:#2e6e3a}
+.table .steps i.cur{background:var(--amber);border-color:#8a6200;animation:blinkc .5s infinite alternate}
+@keyframes blinkc{from{filter:brightness(.8)}to{filter:brightness(1.4)}}
+.flowTag.g{color:#8dffb0;border-color:#2e6e3a}
+.flowTag.y{color:#ffd88a;border-color:#8a6200}
+.flowTag.r{color:#ff8d6e;border-color:var(--red);animation:blinkc .4s infinite alternate}
+/* ===== 预收就绪：整桌虚线绿光 ===== */
+.table.pcReady .top{box-shadow:0 4px 0 #241305,0 0 0 3px #7cc79a,0 0 16px rgba(124,199,154,.6);outline:2px dashed #7cc79a;outline-offset:4px}
+
+#hint{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);z-index:15;background:rgba(20,12,5,.95);color:#f0e2c8;font-size:12px;padding:6px 14px;border-radius:12px;border:1px solid var(--gold);white-space:nowrap;pointer-events:none;transition:opacity .3s}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="hud">
+    <div id="logo"><b>HUA MUI<br>FLOW MASTER</b><span>KOPITIAM</span></div>
+    <div class="chip"><b id="hudTime">11:00</b><span>LUNCH RUSH</span></div>
+    <div class="chip"><b id="hudSales">RM 0</b><span>销售</span></div>
+    <div class="chip"><b id="hudStars">4.2★</b><span>GOOGLE</span></div>
+    <div class="chip"><b id="hudWait">0</b><span>等位</span></div>
+    <div class="chip"><b id="hudTurn">0</b><span>翻台</span></div>
+  </div>
+  <div id="goalRow">🎯 今日目标 <div class="bar"><i id="goalFill"></i></div> <b id="goalTxt">RM 0 / 2200</b></div>
+  <div id="ticker"><span id="tickerTxt">欢迎来到华美茶室！点桌子快派，拖小人指定派工。</span></div>
+  <div id="mapWrap">
+    <div id="map"></div>
+    <div class="alertChip" id="yellowAlert">🟨 YELLOW ORDER!</div>
+    <div class="alertChip" id="chatAlert">⚠️ 员工扎堆聊天 · 点此打散</div>
+    <div id="hint" style="opacity:0"></div>
+  </div>
+  <div id="taskbar"></div>
+  <div id="skills">
+    <div class="skill" data-sk="split"><b>🗣️</b>打散聊天<div class="cd" style="display:none"></div></div>
+    <div class="skill" data-sk="rush"><b>⚡</b>全员冲刺<div class="cd" style="display:none"></div></div>
+    <div class="skill" data-sk="calm"><b>🧯</b>主管救火<div class="cd" style="display:none"></div></div>
+  </div>
+
+  <div class="overlay" id="startOv">
+    <div class="panel">
+      <div class="ribbon"><h1>🏮 HUA MUI FLOW MASTER</h1><h2>KOPITIAM · 外场主管 · 20 桌午市</h2></div>
+      <div class="pbody">
+        <div class="rule">🤖 员工全自动工作，但只有「及格」水平——<b>评级看你</b>。</div>
+        <div class="rule">👆 <b>点桌子</b>=就近快派；<b>拖小人到桌上</b>=指定派工（拖忙人=救火）；<b>拖到岗位牌</b>=顶岗守门/收银。</div>
+        <div class="rule">🔄 客人离桌，<b>连点桌子四下</b>接力翻台，计时保持绿色=Excellent！</div>
+        <div class="rule">🧹 桌子亮<b>绿色虚线</b>=可预收，点一下翻台跳步；系统不会替你预收。</div>
+        <div class="rule">⚖️ 收盘堆去Cleaning、收杯堆回Bar，<b>堆满会卡产线</b>要派人洗；Son和Yu聊天要打散；⚡冲刺透支体力。</div>
+      </div>
+      <button class="bigBtn" id="startBtn">开 始 营 业</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="endOv" style="display:none">
+    <div class="panel">
+      <div class="ribbon"><h1>TODAY'S RESULT</h1><h2 id="endSub">打烊结算</h2></div>
+      <div class="pbody">
+        <div id="gradeWrap">🏆 <span id="gradeBox">A</span> 🏆<div id="gradeWord">EXCELLENT!</div></div>
+        <div class="scoreRows" id="scoreRows"></div>
+        <div class="resultNums" id="endStats"></div>
+      </div>
+      <button class="bigBtn" id="againBtn">再 来 一 轮</button>
+    </div>
+  </div>
+</div>
+<script>
+/* ==== 错误显示器：任何报错直接显示在屏幕上 ==== */
+window.addEventListener("error",e=>{
+  try{
+    let bar=document.getElementById("errBar");
+    if(!bar){ bar=document.createElement("div"); bar.id="errBar";
+      bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:9999;background:#b91c1c;color:#fff;font-size:11px;padding:6px 10px;font-family:monospace;word-break:break-all";
+      document.body.appendChild(bar); }
+    bar.textContent="⚠️ "+e.message+" @"+(e.lineno||"?");
+  }catch(_){}
+});
+/* =====================================================================
+   Floor Rush Supervisor — Playable Prototype
+   系统拆分（单文件版，逻辑按模块分区，正式工程可拆到 /src/systems/*）:
+   CONFIG / MapData / StaffSystem / CustomerSystem / KitchenSystem
+   TaskSystem / AutoFlowSystem / PreCleanSystem / HostSystem
+   YellowOrderSystem / ChatSystem / EventTicker / ReviewSystem
+   SkillSystem / ScoreSystem / Renderer / GameLoop
+===================================================================== */
+"use strict";
+
+/* ============================ CONFIG ============================ */
+const CFG = {
+  duration: 360,            // 一关 6 分钟，节奏更从容
+  baseSpeed: 28,
+  custSpeed: 15,
+  waitPatience: 48,
+  scanTime: 4.5, qrFailRate: .14,
+  cookBase: 12, cookPerHead: 2, kitchenSlots: 4, missOrderRate: .07,
+  barBase: 5, barPerHead: 1.2, barSlots: 2,
+  yellowAt: 52, blowUpAt: 85,
+  eatBase: 30, eatPerHead: 4,
+  precleanSafe: .45,
+  flowWork: 1.9,
+  flowExcellent: 12, flowGood: 18, flowNormal: 32,
+  chatIdle: 7,
+  priceHead: 22,
+  salesGoal: 1300,
+};
+
+/* ============================ MapData ============================ */
+const POS = {
+  kitchen:{x:12,y:6},  drink:{x:90,y:46},  clean:{x:78,y:6},
+  cashier:{x:87,y:88}, host:{x:50,y:88},
+  entrance:{x:50,y:97.5}, waiting:{x:10,y:91},
+};
+const TABLE_POS = [];
+TABLE_POS.push({x:28,y:20},{x:68,y:20},{x:48,y:34},{x:28,y:48},{x:68,y:48},{x:48,y:62},{x:28,y:76},{x:68,y:76});
+const STATIONS = [
+  {p:POS.kitchen, ico:"🍳", lbl:"KITCHEN"},
+  {p:POS.drink,   ico:"🧋", lbl:"BAR"},
+  {p:POS.clean,   ico:"🧽", lbl:"CLEANING", decor:1},
+  {p:POS.cashier, ico:"🖥️", lbl:"CASHIER"},
+  {p:POS.host,    ico:"📋", lbl:"HOST"},
+  {p:POS.entrance,ico:"🚪", lbl:"ENTRANCE", decor:1},
+  {p:POS.waiting, ico:"🪑", lbl:"WAITING", decor:1},
+];
+
+const STAFF_DEF = [
+  {id:"host",   name:"Mou", role:"HOST",    ava:"🧑‍💼", speed:1.15, home:POS.host},
+  {id:"run",    name:"Rong",role:"RUNNER A",ava:"🏃",  speed:1.32, home:{x:7,y:14}},
+  {id:"rn2",    name:"Lin", role:"RUNNER B",ava:"🏃‍♂️", speed:1.25, home:{x:18,y:14}},
+  {id:"sa",     name:"Son", role:"SERVER A",ava:"👩‍🦰", speed:1.05, home:{x:38,y:13}},
+  {id:"sb",     name:"Yu",  role:"SERVER B",ava:"👧",  speed:1.05, home:{x:58,y:13}},
+  {id:"sc",     name:"Moi", role:"SERVER C",ava:"🧔",  speed:.9,  home:{x:90,y:66}, cleanBonus:1.35},
+];
+
+/* ============================ SpriteSystem（像素小人） ============================ */
+const SPR_MAP=[
+"...HHHH...",
+"..HHHHHH..",
+"..HSSSSH..",
+"..SSSSSS..",
+"...SSSS...",
+"..TTTTTT..",
+".TTTTTTTT.",
+".STTTTTTS.",
+"..TAAAAT..",
+"..TAAAAT..",
+"..PPPPPP..",
+"..PP..PP..",
+"..PP..PP..",
+".DD....DD.",
+];
+const _sprCache={};
+function makeSprite(pal){
+  const key=JSON.stringify(pal);
+  if(_sprCache[key]!==undefined)return _sprCache[key];
+  try{
+    const w=10,h=14,sc=4;
+    const c=document.createElement("canvas"); c.width=w*sc; c.height=h*sc;
+    const ctx=c.getContext("2d");
+    if(!ctx)return _sprCache[key]=null;
+    SPR_MAP.forEach((row,y)=>{[...row].forEach((ch,x)=>{
+      if(pal[ch]){ctx.fillStyle=pal[ch];ctx.fillRect(x*sc,y*sc,sc,sc);}
+    });});
+    return _sprCache[key]=c.toDataURL();
+  }catch(e){ return _sprCache[key]=null; }
+}
+const SKIN="#f2c29a", SKIN2="#e0a878", SHOE="#241608";
+const STAFF_PAL={
+  host:{H:"#2b1c10",S:SKIN,T:"#34558b",A:"#24406e",P:"#2b2b33",D:SHOE},
+  cash:{H:"#4a2c14",S:SKIN,T:"#8a4f9e",A:"#6d3a80",P:"#3a2838",D:SHOE},
+  run: {H:"#1c1c1c",S:SKIN2,T:"#3f8f4f",A:"#2e6e3a",P:"#33403a",D:SHOE},
+  rn2: {H:"#2b1c10",S:SKIN,T:"#3f9fa8",A:"#2e7a82",P:"#2f3d40",D:SHOE},
+  sa:  {H:"#a5502a",S:SKIN,T:"#c0392b",A:"#f4e3c1",P:"#3a2838",D:SHOE},
+  sb:  {H:"#2b1c10",S:SKIN,T:"#c0392b",A:"#f4e3c1",P:"#3a2838",D:SHOE},
+  sc:  {H:"#5c3a1c",S:SKIN2,T:"#c0392b",A:"#f4e3c1",P:"#33302b",D:SHOE},
+  sd:  {H:"#111",   S:SKIN, T:"#c0392b",A:"#f4e3c1",P:"#33302b",D:SHOE},
+};
+const CUST_SHIRTS=["#6b8e4e","#8f6b4e","#4e6b8f","#7a5d8f","#8f4e5e","#4e8f83"];
+function custPal(typeKey){
+  const shirt=pick(CUST_SHIRTS);
+  const base={H:pick(["#2b1c10","#1c1c1c","#4a2c14","#5c3a1c"]),S:Math.random()<.5?SKIN:SKIN2,T:shirt,A:shirt,P:"#3a3430",D:SHOE};
+  if(typeKey==="老人"){base.H="#cfcfcf";base.T="#6b705c";base.A="#6b705c";}
+  if(typeKey==="急性子"){base.T="#d97c2b";base.A="#b35f16";}
+  if(typeKey==="博主"){base.T="#d95d9e";base.A="#b3437e";}
+  if(typeKey==="VIP"){base.T="#26262c";base.A="#26262c";base.P="#1a1a20";}
+  return base;
+}
+function sprImg(url,cls){ return url?`<img class="spr ${cls||""}" src="${url}" draggable="false">`:""; }
+
+const CUST_TYPES = [
+  {k:"普通", faces:["🚶","👫","👨‍👩‍👦","👨‍👩‍👧‍👦"], w:5},
+  {k:"急性子", faces:["😤","😤😤","😤😤🙂","😤😤🙂🙂"], w:2, pat:.65},
+  {k:"老人", faces:["👴","👴👵","👴👵🧓","👴👵🧓🧓"], w:2, eat:1.35},
+  {k:"博主", faces:["🤳","🤳💃","🤳💃🕺","🤳💃🕺🙂"], w:1, weight:2},
+  {k:"VIP",  faces:["🕴️","🕴️💼","🕴️💼🙂","🕴️💼🙂🙂"], w:1, weight:2, tip:1.5},
+];
+
+/* ============================ State ============================ */
+let G;
+const $ = s=>document.querySelector(s);
+const map = $("#map");
+const dist=(a,b)=>Math.hypot(a.x-b.x,(a.y-b.y)*1.35);
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+let uid=0;
+
+function newGame(){
+  G = {
+    t:0, running:false, over:false,
+    sales:0, served:0, complaints:0, sop:0, yellows:0, yellowBlown:0,
+    reviews:[4,4,5,4,4],          // 开局基础评价
+    flows:{E:0,G:0,N:0,P:0}, combo:0, lastFlowDone:-99, lastFlowStaff:null,
+    staff:[], tables:[], groups:[], tasks:[], dishes:[], cookQ:[],
+    spawnT:2.5, selected:null, boost:0,
+    pile:{c:0,b:0},
+    skills:{split:0,rush:0,calm:0},
+    wanderIncidents:0, hudT:0,
+  };
+  map.innerHTML="";
+  // 车站
+  STATIONS.forEach(s=>{
+    const d=document.createElement("div");
+    d.className="station"+(s.decor?" decor":"");
+    d.style.left=s.p.x+"%"; d.style.top=s.p.y+"%";
+    d.innerHTML=`<div class="box">${s.ico}<span class="pileN" style="display:none"></span></div><span class="lbl">${s.lbl}</span>`;
+    if(s.lbl==="BAR")pileEls.b=d.querySelector(".pileN");
+    if(s.lbl==="CLEANING")pileEls.c=d.querySelector(".pileN");
+    if(s.lbl==="HOST"||s.lbl==="CASHIER"){
+      d.classList.add("post");
+      postEls[s.lbl==="HOST"?"host":"cash"]=d;
+      d.addEventListener("pointerdown",e=>{
+        e.stopPropagation();
+        hint(`把员工拖到这里 = 顶岗${s.lbl==="HOST"?"（自动带位守门）":"（自动结账）"}`);
+      });
+    }
+    map.appendChild(d);
+  });
+  // 桌子（点桌子直接派工）
+  TABLE_POS.forEach((p,i)=>{
+    const el=document.createElement("div");
+    el.className="table ready";
+    el.style.left=p.x+"%"; el.style.top=p.y+"%";
+    el.innerHTML=`<div class="top"><span class="num">T${i+1}</span><span class="items"></span><div class="steps" style="display:none"><i></i><i></i><i></i><i></i></div></div><div class="flowTag" style="display:none"></div><div class="tbadge" style="display:none"></div>`;
+    map.appendChild(el);
+    const tb={i, x:p.x, y:p.y, el, badgeEl:el.querySelector(".tbadge"), _bk:null, state:"ready", group:null,
+      pcPlates:false, flowStep:0, flowStart:0};
+    el.addEventListener("pointerdown",e=>{e.stopPropagation();tableTap(tb);});
+    G.tables.push(tb);
+  });
+  // 员工（像素小人）
+  STAFF_DEF.forEach(d=>{
+    const el=document.createElement("div");
+    el.className="pawn staff";
+    const url=makeSprite(STAFF_PAL[d.id]);
+    el.innerHTML=`<div class="ava">${url?sprImg(url):d.ava}</div><span class="tag">${d.name}</span><div class="stbar"><i></i></div><div class="work" style="display:none"><i></i></div><span class="carry"></span>`;
+    map.appendChild(el);
+    const s={...d, x:d.home.x, y:d.home.y, el, spr:url, stamina:100, task:null, recall:null,
+      state:"idle", idleT:0, stunT:0, stunCd:0, wp:[], workT:0, workDur:0};
+    el.addEventListener("pointerdown",e=>{e.stopPropagation();startDragCandidate(s,e);});
+    G.staff.push(s);
+  });
+  updateHUD(true);
+}
+
+/* ============================ Ticker & Pops ============================ */
+const tickerQ=[];
+function say(msg){ tickerQ.push(msg); }
+let tickerT=0;
+function tickTicker(dt){
+  tickerT-=dt;
+  if(tickerT<=0 && tickerQ.length){ $("#tickerTxt").textContent=tickerQ.shift(); tickerT=2.4; }
+}
+function pop(x,y,txt,cls=""){
+  const d=document.createElement("div");
+  d.className="pop "+cls; d.textContent=txt;
+  d.style.left=x+"%"; d.style.top=y+"%";
+  map.appendChild(d); setTimeout(()=>d.remove(),1350);
+}
+function hint(t,sticky){
+  const h=$("#hint"); h.textContent=t; h.style.opacity=1;
+  clearTimeout(h._t);
+  if(!sticky) h._t=setTimeout(()=>{ if(!G||!G.selected) h.style.opacity=0; else if(G.selected) hint(`👆 已选 ${G.selected.name} — 点亮边的桌子派工`,true); },2200);
+}
+function hideHint(){ const h=$("#hint"); clearTimeout(h._t); h.style.opacity=0; }
+
+/* ============================ StaffSystem ============================ */
+/* ============================ DragSystem（拖员工派工） ============================ */
+let drag=null;
+const postEls={};
+const pileEls={};
+function killGhost(){
+  const g=document.getElementById("dragGhost"); if(g)g.remove();
+  map.classList.remove("dragging");
+}
+function startDragCandidate(s,e){
+  if(!G.running)return;
+  if(e.preventDefault)e.preventDefault();        // 阻止长按存图/系统手势抢走指针
+  if(drag&&drag.hover)drag.hover.el.classList.remove("dropHover");
+  killGhost();                                    // 清理任何未收尾的旧拖拽
+  drag={staff:s, pid:e.pointerId, sx:e.clientX, sy:e.clientY, active:false, hover:null};
+}
+document.addEventListener("pointermove",e=>{
+  if(!drag||e.pointerId!==drag.pid)return;        // 只跟随发起拖拽的那根手指
+  if(!drag.active){
+    if(Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)<10)return;
+    drag.active=true;
+    killGhost();
+    const g=document.createElement("div"); g.id="dragGhost";
+    g.innerHTML=(drag.staff.spr?sprImg(drag.staff.spr):drag.staff.ava)+`<span>${drag.staff.name}</span>`;
+    document.body.appendChild(g); drag.ghost=g;
+    map.classList.add("dragging");
+    drag.rect=map.getBoundingClientRect();
+  }
+  drag.ghost.style.left=e.clientX+"px"; drag.ghost.style.top=e.clientY+"px";
+  const mx=(e.clientX-drag.rect.left)/drag.rect.width*100;
+  const my=(e.clientY-drag.rect.top)/drag.rect.height*100;
+  const tgt=dragHitTest(mx,my);
+  if(drag.hover&&(!tgt||drag.hover.el!==tgt.el))drag.hover.el.classList.remove("dropHover");
+  drag.hover=tgt;
+  if(tgt)tgt.el.classList.add("dropHover");
+},{passive:false});
+function endDrag(e,cancelled){
+  if(!drag)return;
+  if(e&&e.pointerId!==undefined&&e.pointerId!==drag.pid)return;
+  const d=drag; drag=null;
+  if(d.hover)d.hover.el.classList.remove("dropHover");
+  killGhost();
+  if(cancelled)return;                            // pointercancel/失焦：只清理，不落子
+  if(!d.active){ hint(`把 ${d.staff.name} 拖到桌子 / 工单 / 岗位牌上`); return; }
+  if(d.hover)dropOn(d.staff,d.hover);
+}
+document.addEventListener("pointerup",e=>endDrag(e,false));
+document.addEventListener("pointercancel",e=>endDrag(e,true));
+window.addEventListener("blur",()=>endDrag(null,true));
+document.addEventListener("contextmenu",e=>{ if(drag)e.preventDefault(); });
+function dragHitTest(mx,my){
+  if(mx<-2||mx>102||my<-2||my>102)return null;
+  for(const k in postEls){
+    const p=k==="host"?POS.host:POS.cashier;
+    if(Math.abs(mx-p.x)<9&&Math.abs(my-p.y)<7)return{kind:"post",key:k,pos:p,el:postEls[k]};
+  }
+  for(const t of G.tasks){
+    if(t.el&&!t.assignee&&Math.abs(mx-(t.x+(t.dx||0)))<6.5&&Math.abs(my-(t.y+(t.dy||0)))<6)
+      return{kind:"chit",task:t,el:t.el};
+  }
+  let best=null,bd=99;
+  for(const tb of G.tables){
+    const d2=Math.hypot(mx-tb.x,(my-tb.y)*1.25);
+    if(d2<11&&d2<bd){bd=d2;best=tb;}
+  }
+  if(best)return{kind:"table",tb:best,el:best.el};
+  return null;
+}
+function dropOn(s,h){
+  if(h.kind==="post"){
+    if(s.task)unassign(s.task);
+    breakChat(s);
+    s.recall={x:h.pos.x,y:h.pos.y};
+    hint(`${s.name} 顶岗${h.key==="host"?"门口（自动带位）":"收银台（自动结账）"}`);
+    return;
+  }
+  if(h.kind==="chit"){
+    assign(s,h.task);
+    pop(h.task.x,h.task.y-3,`${s.name} → ${taskName(h.task)}`,"good");
+    return;
+  }
+  const open=tasksForTable(h.tb).filter(t=>!t.assignee);
+  if(!open.length){ hint(`T${h.tb.i+1} 暂无可派工作`); return; }
+  assign(s,open[0]);
+  pop(h.tb.x,h.tb.y,`${s.name} → ${taskName(open[0])}`,"good");
+}
+function setSel(){ /* 选择模式已由拖拽取代 */ }
+function staffSpeed(s){
+  let v=CFG.baseSpeed*s.speed*(0.5+0.5*(s.stamina/100));
+  if(G.boost>0) v*=1.4;
+  return v;
+}
+function moveToward(e,tx,ty,spd,dt){
+  const dx=tx-e.x, dy=ty-e.y, d=Math.hypot(dx,dy);
+  if(d<0.8){e.x=tx;e.y=ty;return true;}
+  const st=spd*dt; if(st>=d){e.x=tx;e.y=ty;return true;}
+  e.x+=dx/d*st; e.y+=dy/d*st; return false;
+}
+function breakChat(s){
+  if(s.state==="chatting"){
+    s.state="idle"; s.idleT=0;
+    const mate=G.staff.find(o=>o!==s&&o.state==="chatting");
+    if(mate){mate.state="idle";mate.idleT=0;}
+    say("💬 聊天被打散了，大家松了口气");
+  }
+}
+function assign(s,task,auto){
+  if(s.task){ // 救火：放回旧任务
+    unassign(s.task); 
+  }
+  breakChat(s);
+  if(!auto) s.recall=null;   // 手动改派=撤岗；自动岗位工作做完会回到顶岗点
+  s.task=task; task.assignee=s; s.state="moving"; s.phase=0; s.workT=0;
+  buildWaypoints(s,task);
+  if(task.el){
+    task.el.classList.remove("pulse"); task.el.classList.add("assigned");
+    task.el.querySelector(".who").textContent=s.ava;
+  }
+  if(!auto) setSel(null);
+}
+function unassign(task){
+  if(task.assignee){ const s=task.assignee; s.task=null; s.state="idle"; s.el.querySelector(".work").style.display="none"; s.el.querySelector(".carry").textContent=""; }
+  task.assignee=null;
+  if(task.el){
+    task.el.classList.add("pulse"); task.el.classList.remove("assigned");
+    task.el.querySelector(".who").textContent="";
+  }
+  const g=task.ref;
+  if(task.type==="seat"&&g){ g.escort=null;
+    if(g.table&&g.table.state==="reserved"){ g.table.state="ready"; g.table=null; } }
+  if(task.type==="guide"&&g) g.escort=null;
+}
+function staffTick(s,dt){
+  // 眩晕
+  if(s.stunT>0){ s.stunT-=dt; s.el.classList.add("stun"); if(s.stunT<=0)s.el.classList.remove("stun"); return; }
+  s.stunCd=Math.max(0,s.stunCd-dt);
+  // 体力
+  if(s.state==="working"||s.state==="moving") s.stamina=Math.max(0,s.stamina-(s.state==="working"?3.6:1.4)*dt*(chatActive()&&!isChatter(s)?1.8:1));
+  else s.stamina=Math.min(100,s.stamina+(s.state==="chatting"?7:5)*dt);
+
+  if(s.task){ taskStep(s,dt); s.idleT=0; return; }
+  if(s.state==="chatting") return; // ChatSystem 控制
+  // 空闲：回顶岗点或自己岗位
+  s.idleT+=dt;
+  const home=s.recall||s.home;
+  if(dist(s,home)>2) moveToward(s,home.x,home.y,staffSpeed(s)*0.7,dt);
+}
+function isChatter(s){return s.id==="sa"||s.id==="sb";}
+function chatActive(){return G.staff.some(s=>s.state==="chatting");}
+
+/* ============================ TaskSystem ============================ */
+/* task: {id,type,x,y,ref,assignee,label,ico,cls,locked} */
+const TABLE_TASK_PRIO={complain:0,soothe:1,helpQR:2,pcPlates:3,flow1:5,flow2:6,flow3:7,flow4:8};
+function addTask(t){
+  t.id=++uid; t.age=0;
+  if(TABLE_TASK_PRIO[t.type]!==undefined){
+    // 桌面任务：不生成浮动工单，由桌子徽章统一显示，点桌子派工
+    t.el=null;
+    G.tasks.push(t);
+    return t;
+  }
+  const el=document.createElement("div");
+  el.className="chit pulse "+(t.cls||"");
+  el.innerHTML=`<span class="ico">${t.ico}</span>${t.label}<span class="who"></span>`;
+  el.style.left=(t.x+ (t.dx||0))+"%"; el.style.top=(t.y+(t.dy||0))+"%";
+  el.addEventListener("pointerdown",e=>{
+    e.stopPropagation();
+    if(!G.running)return;
+    if(t.assignee){ hint("这张单已有人负责"); return; }
+    const s=nearestIdle(t.x,t.y,t.type==="checkout"||t.type==="seat");
+    if(!s){ hint("没有空闲员工了——拖忙碌员工过来救火"); return; }
+    assign(s,t,true);
+    pop(t.x,t.y-3,`${s.name} → ${taskName(t)}`,"good");
+  });
+  t.el=el; map.appendChild(el);
+  G.tasks.push(t);
+  return t;
+}
+function nearestIdle(x,y,inclPosts){
+  const cands=G.staff.filter(s=>!s.task&&s.state==="idle"&&s.stunT<=0&&!s.recall
+    &&(inclPosts||(s.id!=="host"&&s.id!=="cash")));
+  if(!cands.length)return null;
+  cands.sort((a,b)=>dist(a,{x,y})-dist(b,{x,y}));
+  return cands[0];
+}
+function tasksForTable(tb){
+  return G.tasks.filter(t=>{
+    if(TABLE_TASK_PRIO[t.type]===undefined)return false;
+    return t.ref===tb || (t.ref&&t.ref.table===tb);
+  }).sort((a,b)=>TABLE_TASK_PRIO[a.type]-TABLE_TASK_PRIO[b.type]);
+}
+function tableTap(tb){
+  if(!G.running)return;
+  const list=tasksForTable(tb);
+  const open=list.filter(t=>!t.assignee);
+  // 一键派工：就近空闲员工立刻上（连点四下 = 四人接力）
+  if(!open.length){ hint(list.length?`T${tb.i+1} 的工作都有人负责了`:`T${tb.i+1} 暂无工作`); return; }
+  const s=nearestIdle(tb.x,tb.y);
+  if(!s){ hint("没有空闲员工了——拖一个忙碌员工过来救火"); return; }
+  assign(s,open[0],true);
+  pop(tb.x,tb.y,`${s.name} → ${taskName(open[0])}`,"good");
+}
+function renderBadges(){
+  G.tables.forEach(tb=>{
+    const list=tasksForTable(tb);
+    const el=tb.badgeEl;
+    tb.el.classList.toggle("hasOpen",list.some(x=>!x.assignee));
+    if(!list.length){ if(tb._bk){tb._bk=null;el.style.display="none";} return; }
+    const t=list[0];
+    tb.el.classList.toggle("pcReady",t.type==="pcPlates");
+    if(t.type.startsWith("flow")){ // 翻台由桌面进度条呈现
+      const queued=list.filter(x=>x.assignee).length;
+      const key="F|"+queued;
+      if(key!==tb._bk){ tb._bk=key;
+        if(queued){ el.style.display="flex"; el.className="tbadge asg"; el.innerHTML=`<b>🤝</b><span>接力</span><i>${queued}</i>`; }
+        else el.style.display="none";
+      }
+      return;
+    }
+    const queued=list.filter(x=>x.assignee).length;
+    const cls=t.type==="complain"?"bad":(t.type==="soothe"||t.type==="helpQR")?"warn":(t.type.startsWith("pc"))?"opt":"";
+    const key=t.id+"|"+(t.assignee?1:0)+"|"+queued+"|"+cls;
+    if(key===tb._bk)return; tb._bk=key;
+    el.style.display="flex";
+    el.className="tbadge "+cls+(t.assignee?" asg":" pulse");
+    el.innerHTML=`<b>${t.ico}</b><span>${t.label}</span>`+(queued?`<i>${queued}</i>`:"");
+  });
+}
+function removeTask(t){
+  if(t.el)t.el.remove();
+  const i=G.tasks.indexOf(t); if(i>=0)G.tasks.splice(i,1);
+  if(t.assignee){const s=t.assignee;s.task=null;s.state="idle";s.el.querySelector(".work").style.display="none";s.el.querySelector(".carry").textContent="";}
+}
+function buildWaypoints(s,t){
+  switch(t.type){
+    case "seat":   s.wp=[{x:t.ref.x,y:t.ref.y}]; break;                 // 先去接客
+    case "guide":  s.wp=[{x:t.ref.x,y:t.ref.y}]; break;
+    case "deliver":s.wp=[{...(t.from||POS.kitchen)}]; break;
+    default:       s.wp=[{x:t.x,y:t.y}];
+  }
+}
+function startWork(s,dur){
+  s.state="working"; s.workT=0;
+  s.workDur=dur*(s.cleanBonus&&s.task&&s.task.type.startsWith("flow")?1/s.cleanBonus:1);
+  if(s.stamina<20)s.workDur*=1.35;
+}
+function workBar(s){ const w=s.el.querySelector(".work"); if(s.state==="working"){w.style.display="block"; w.firstElementChild.style.width=Math.min(100,s.workT/s.workDur*100)+"%";} else w.style.display="none"; }
+
+function taskStep(s,dt){
+  const t=s.task; if(!t)return;
+  const spd=staffSpeed(s);
+  const arriveWp=()=> s.wp.length && moveToward(s,s.wp[0].x,s.wp[0].y,spd,dt) && (s.wp.shift(),true);
+
+  switch(t.type){
+    case "seat":{
+      if(s.phase===0){ if(arriveWp()){ 
+        const g=t.ref;
+        if(g.state!=="waiting"&&g.state!=="wandering"){ removeTask(t); return; }
+        const tb=G.tables.find(x=>x.state==="ready");
+        if(!tb){ hint("暂时没有 Ready 的桌子"); removeTask(t); return; }
+        tb.state="reserved"; g.escort=s; g.table=tb; s.phase=1; s.wp=[{x:tb.x,y:tb.y}];
+      }} else if(arriveWp()){
+        seatGroup(t.ref,t.ref.table); removeTask(t);
+      }
+      break;}
+    case "guide":{
+      if(s.phase===0){ if(arriveWp()){ const g=t.ref; if(g.state!=="wandering"){removeTask(t);return;} g.escort=s; s.phase=1; s.wp=[{...POS.waiting}]; }}
+      else if(arriveWp()){ const g=t.ref; g.escort=null; g.state="waiting"; g.patience=Math.min(g.patienceMax,g.patience+10); say("🚶 乱入顾客被带回等位区"); removeTask(t); }
+      break;}
+    case "deliver":{
+      if(s.phase===0){ if(arriveWp()){ startWork(s,0.8); s.phase=1; } }
+      else if(s.phase===1){ s.workT+=dt; if(s.workT>=s.workDur){ s.el.querySelector(".carry").textContent=t.kind==="b"?"🧋":"🍜"; s.state="moving"; s.phase=2; s.wp=[{x:t.ref.table.x,y:t.ref.table.y}]; } }
+      else if(s.phase===2){ if(arriveWp()){ startWork(s,0.7); s.phase=3; } }
+      else { s.workT+=dt; if(s.workT>=s.workDur){ s.el.querySelector(".carry").textContent=""; serveItem(t.ref,t.kind||"k"); removeTask(t);} }
+      break;}
+    case "helpQR": case "soothe": case "complain":{
+      if(s.phase===0){ if(arriveWp()){ startWork(s, t.type==="helpQR"?2:2.6); s.phase=1; } }
+      else { s.workT+=dt; if(s.workT>=s.workDur){
+        const g=t.ref;
+        if(t.type==="helpQR"&&g.state==="qrStuck"){ placeOrder(g); pop(g.x,g.y,"扫码OK","good"); }
+        if(t.type==="soothe"){ g.sat=Math.min(100,g.sat+18); g.soothedAt=G.t; pop(g.x,g.y,"已安抚","good"); }
+        if(t.type==="complain"){ g.sat=Math.min(100,g.sat+28); g.complaining=false; pop(g.x,g.y,"化解投诉","good"); }
+        removeTask(t);} }
+      break;}
+    case "pcPlates":{
+      if(s.phase===0){ if(arriveWp()){ startWork(s,1.9); s.phase=1; } }
+      else if(s.phase===1){ s.workT+=dt; if(s.workT>=s.workDur){
+        precleanDone(t);
+        s.el.querySelector(".carry").textContent="🍽️";
+        s.state="moving"; s.phase=2;
+        s.wp=[{...POS.clean}];
+      } }
+      else { if(arriveWp()){ s.el.querySelector(".carry").textContent=""; dropAtStation(s,"c"); removeTask(t); } }
+      break;}
+    case "flow1": case "flow2": case "flow3": case "flow4":{
+      const step=+t.type.slice(4), tb=t.ref;
+      if(s.phase===0){ if(arriveWp()) s.phase=1; }
+      if(s.phase===1){
+        if(tb.flowStep!==step-1){ s.state="waiting"; return; } // 到位等待接力
+        if(s.state!=="working") startWork(s,CFG.flowWork*(G.boost>0?0.65:1)*(step===3&&G.pile.c>=8?1.8:1));
+        s.workT+=dt;
+        if(s.workT>=s.workDur){
+          flowStepDone(tb,step,s);       // 桌面这一步完成，下一棒立刻可接
+          if(step<=2){                   // 收盘→送清洁站 / 收杯→送回Bar
+            s.el.querySelector(".carry").textContent=step===1?"🍽️":"🥤";
+            s.state="moving"; s.phase=2;
+            s.wp=[step===1?{...POS.clean}:{...POS.drink}];
+          } else removeTask(t);
+        }
+      } else if(s.phase===2){
+        if(arriveWp()){
+          s.el.querySelector(".carry").textContent="";
+          dropAtStation(s, step===1?"c":"b");
+          removeTask(t);
+        }
+      }
+      break;}
+    case "washC": case "washB":{
+      if(s.phase===0){ if(arriveWp()){ startWork(s,3); s.phase=1; } }
+      else { s.workT+=dt; if(s.workT>=s.workDur){
+        const k=t.type==="washC"?"c":"b";
+        G.pile[k]=Math.max(0,G.pile[k]-6);
+        pop(t.x,t.y,k==="c"?"碗洗完了":"杯洗完了","good");
+        removeTask(t);
+      } }
+      break;}
+    case "checkout":{
+      if(s.phase===0){ if(arriveWp()){ s.phase=1; } }
+      if(s.phase===1){
+        const q=G.groups.filter(g=>g.state==="paying");
+        if(!q.length){ removeTask(t); return; }
+        if(s.state!=="working") startWork(s,2.1);
+        s.workT+=dt;
+        if(s.workT>=s.workDur){ payGroup(q[0]); s.state="idle"; 
+          const left=G.groups.filter(g=>g.state==="paying").length;
+          if(left>0){ s.workT=0; startWork(s,2.1); if(t.el)t.el.lastElementChild.textContent=s.ava; }
+          else removeTask(t);
+        }
+      }
+      break;}
+  }
+  workBar(s);
+}
+
+/* ============================ StationSystem（堆积回压） ============================ */
+/* 收盘→堆在Cleaning，收杯→堆在Bar。堆≥5出洗单，堆≥8反噬：
+   Cleaning爆 → 抹桌(第3步)耗时×1.8（没干净抹布）
+   Bar爆 → 饮料停产 → 黄单压力
+   翻台越快堆越快 —— 冲速度就要有人轮去洗，主管来权衡。 */
+function dropAtStation(s,st){
+  G.pile[st]++;
+  if(s.stamina<20 && Math.random()<0.25){
+    G.pile[st]++; s.stunT=1.5;
+    pop(s.x,s.y,"太累打翻了!","bad");
+    say(`💥 ${s.name} 累到手滑打翻，${st==="c"?"清洁站":"Bar台"}更乱了——该让TA歇歇`);
+  }
+  if(G.pile[st]===8) say(st==="c"?"🧼 清洁站爆了！抹桌变慢，快派人洗碗":"🥤 Bar台杯子堆满！饮料停产，快派人洗杯");
+}
+function stationTick(){
+  if(G.pile.c>=5 && !G.tasks.some(t=>t.type==="washC"))
+    addTask({type:"washC",x:POS.clean.x,y:POS.clean.y,ico:"🧼",label:"洗碗",cls:"warn"});
+  if(G.pile.b>=5 && !G.tasks.some(t=>t.type==="washB"))
+    addTask({type:"washB",x:POS.drink.x,y:POS.drink.y,ico:"🫧",label:"洗杯",cls:"warn"});
+  for(const k of ["c","b"]){
+    const el=pileEls[k]; if(!el)continue;
+    if(G.pile[k]>0){ el.style.display="inline-block"; el.textContent=G.pile[k];
+      el.className="pileN"+(G.pile[k]>=8?" bad":G.pile[k]>=5?" warn":""); }
+    else el.style.display="none";
+  }
+}
+
+/* ============================ AutoDutySystem ============================ */
+/* 全员自动工作：
+   - Host 岗 / Cashier 岗：0.6 秒反应，自动带位 / 自动结账（谁站岗谁做）
+   - 其他员工：空闲 2 秒反应，就近自动接手 投诉>黄单>扫码>劝导>送餐>翻台当前步
+   - 自动化的极限就是"及格"：
+     · Pre Clean 永远不自动 —— 只有主管会派预收
+     · 翻台每一步解锁后要等 2 秒才有人自动来 —— 手动接力快一倍
+     · 聊天中的Son和Yu不接活 —— 要主管打散
+   手动派单没有任何延迟，主管永远比系统快。 */
+function autoTick(dt){
+  G.tasks.forEach(t=>t.age=(t.age||0)+dt);
+  const idleAt=p=>G.staff.find(s=>!s.task&&s.state==="idle"&&s.stunT<=0&&dist(s,p)<9);
+  // 岗位自动
+  const seatT=G.tasks.find(t=>t.type==="seat"&&!t.assignee&&t.age>0.6);
+  if(seatT){ const s=idleAt(POS.host); if(s)assign(s,seatT,true); }
+  const co=G.tasks.find(t=>t.type==="checkout"&&!t.assignee&&t.age>0.6);
+  if(co){ const s=idleAt(POS.cashier); if(s)assign(s,co,true); }
+  // 全员自动接活
+  const prio={complain:0,soothe:1,helpQR:2,guide:3,deliver:4,flow1:5,flow2:5,flow3:5,flow4:5,washC:6,washB:6,checkout:7};
+  const open=G.tasks.filter(t=>!t.assignee && prio[t.type]!==undefined && t.age>(t.type.startsWith("wash")?5:2));
+  open.sort((a,b)=>(prio[a.type]-prio[b.type])||(b.age-a.age));
+  for(const t of open){
+    if(t.type.startsWith("flow")){
+      const step=+t.type.slice(4);
+      if(t.ref.flowStep!==step-1) continue;              // 只接当前解锁步
+      if(G.t-(t.ref.flowStepAt||0)<4.5) continue;        // 解锁后 4.5 秒才自动来，抢先接力靠你
+    }
+    const cands=G.staff.filter(s=>!s.task&&s.state==="idle"&&s.stunT<=0&&!s.recall
+      &&s.id!=="host");
+    if(!cands.length)break;
+    const anchor=t.from||{x:t.x,y:t.y};
+    cands.sort((a,b)=>dist(a,anchor)-dist(b,anchor));
+    assign(cands[0],t,true);
+  }
+}
+
+/* ============================ CustomerSystem ============================ */
+function spawnGroup(){
+  const size=pick([1,2,2,3,3,4]);
+  const type=weightedType();
+  const g={id:++uid,size,type, x:POS.entrance.x,y:POS.entrance.y,
+    state:"entering", patienceMax:CFG.waitPatience*(type.pat||1),
+    patience:CFG.waitPatience*(type.pat||1), sat:80, table:null,
+    orderAt:0, delivered:false, yellow:false, soothedAt:-99, eatT:0, eatDur:0,
+    escort:null, complaining:false, el:null};
+  const el=document.createElement("div");
+  el.className="pawn";
+  const n=Math.min(size,2);
+  let faces="";
+  for(let i=0;i<n;i++){ const u=makeSprite(custPal(type.k)); faces+= u?sprImg(u,"c"):""; }
+  if(!faces) faces=type.faces[size-1];
+  el.innerHTML=`<div class="face">${faces}</div><span class="tag">${type.k}×${size}</span><div class="pbar"><i></i></div><span class="bub" style="display:none"></span>`;
+  map.appendChild(el); g.el=el;
+  G.groups.push(g);
+  // Host 在岗？
+  if(!hostOnDuty() && Math.random()<0.35){
+    g.state="wandering";
+    const tb=pick(G.tables);
+    g.tx=tb.x+rnd(-6,6); g.ty=tb.y+rnd(4,8);
+    G.wanderIncidents++;
+    say("⚠️ 门口没人！顾客自己乱走进来了");
+    g.guideTask=addTask({type:"guide",ref:g,x:g.tx,y:g.ty,ico:"🙋",label:"劝导带回",cls:"warn"});
+  } else {
+    g.state="waiting";
+  }
+}
+function weightedType(){
+  const tot=CUST_TYPES.reduce((a,t)=>a+t.w,0); let r=Math.random()*tot;
+  for(const t of CUST_TYPES){ if((r-=t.w)<0)return t; } return CUST_TYPES[0];
+}
+function waitingSlot(g){
+  const idx=G.groups.filter(x=>x.state==="waiting").indexOf(g);
+  return {x:POS.waiting.x+(idx%2)*7, y:POS.waiting.y-Math.floor(idx/2)*5.5};
+}
+function seatGroup(g,tb){
+  g.state="scanning"; g.scanT=0;
+  g.x=tb.x; g.y=tb.y+6; tb.state="occupied"; tb.group=g;
+  tb.pcPlates=false;
+  g.escort=null;
+  setBub(g,"📱");
+  refreshSeatTasks();
+}
+function setBub(g,txt){ const b=g.el.querySelector(".bub"); if(!txt){b.style.display="none";return;} b.style.display="block"; b.textContent=txt; }
+function placeOrder(g){
+  g.state="ordered"; g.orderAt=G.t; setBub(g,"🧾");
+  g.got={k:false,b:false};
+  G.cookQ.push({g, st:"k", t:0, dur:CFG.cookBase+g.size*CFG.cookPerHead, started:false});
+  G.cookQ.push({g, st:"b", t:0, dur:CFG.barBase+g.size*CFG.barPerHead, started:false});
+}
+function serveItem(g,kind){
+  if(g.state!=="ordered")return;
+  g.got[kind]=true;
+  if(kind==="b") pop(g.table.x,g.table.y,"🧋 饮料到","good");
+  if(!(g.got.k&&g.got.b)) return;   // 餐+饮都到齐才开吃
+  g.delivered=true; g.state="eating";
+  g.eatDur=(CFG.eatBase+g.size*CFG.eatPerHead)*(g.type.eat||1); g.eatT=0;
+  const waited=G.t-g.orderAt;
+  if(waited<22){ g.sat=Math.min(100,g.sat+8); pop(g.x,g.y,"上菜快 +8","good"); }
+  if(g.yellow){ g.table.el.classList.remove("yellow"); g.yellow=false; }
+  G.tasks.filter(t=>t.type==="soothe"&&t.ref===g).forEach(removeTask);
+  setBub(g,null);
+  updateTableItems(g.table);
+  // Pre Clean 工单：等客人把盘吃空（🍽️出现）才会跳出 —— 见 custTick
+}
+function updateTableItems(tb){
+  const it=tb.el.querySelector(".items");
+  if(!tb.group||tb.group.state!=="eating"){ 
+    if(tb.state==="dirty"||tb.state==="flow"){
+      const s=tb.flowStep;
+      it.textContent = s<1?"🍛🥤":s<2?"🥤":s<3?"🫧":"📱";
+    } else it.textContent="";
+    return;
+  }
+  const g=tb.group, p=g.eatT/g.eatDur;
+  const plate = p<CFG.precleanSafe ? "🍛" : "🍽️";
+  it.textContent = tb.pcPlates ? "🥤" : plate+"🥤";
+}
+function custTick(g,dt){
+  switch(g.state){
+    case "entering": break;
+    case "waiting":{
+      const s=waitingSlot(g); moveToward(g,s.x,s.y,CFG.custSpeed,dt);
+      g.patience-=dt;
+      if(g.patience<=0){ leaveAngry(g,"等太久，客人走了"); }
+      break;}
+    case "wandering":{
+      if(g.escort){ g.x=g.escort.x+2.5; g.y=g.escort.y+3; break; }
+      moveToward(g,g.tx,g.ty,CFG.custSpeed*0.9,dt);
+      g.patience-=dt*1.3;
+      // 撞人
+      G.staff.forEach(s=>{ if(s.state!=="idle"&&s.stunCd<=0&&dist(s,g)<6){ s.stunT=2; s.stunCd=5; pop(s.x,s.y,"撞到了! 晕2秒","bad"); say(`💥 ${s.name} 被乱入顾客挡住，Stun 2秒`);} });
+      if(g.patience<=0) leaveAngry(g,"乱入顾客没人理，走了");
+      break;}
+    case "scanning":{
+      g.scanT+=dt;
+      if(g.scanT>=CFG.scanTime){
+        if(Math.random()<CFG.qrFailRate){ g.state="qrStuck"; setBub(g,"📵"); say(`📵 T${g.table.i+1} 扫码失败，需要帮助`);
+          addTask({type:"helpQR",ref:g,x:g.table.x,y:g.table.y,ico:"📵",label:"扫码",cls:"warn"});
+        } else placeOrder(g);
+      }
+      break;}
+    case "qrStuck": g.sat-=dt*1.5; break;
+    case "ordered":{
+      const w=G.t-g.orderAt;
+      if(w>25) g.sat-=dt*1.2;
+      break;}
+    case "eating":{
+      g.eatT+=dt;
+      if((g.eatT/g.eatDur>=CFG.precleanSafe)&&!g._cue){ g._cue=1; updateTableItems(g.table);
+        addTask({type:"pcPlates",ref:g.table,x:g.table.x,y:g.table.y,dx:-8,ico:"🍽️",label:"预收",cls:"optional"});
+        pop(g.table.x,g.table.y,"可预收","good");
+      }
+      if(g.eatT>=g.eatDur) finishEating(g);
+      break;}
+    case "paying":{
+      const q=G.groups.filter(x=>x.state==="paying"), idx=q.indexOf(g);
+      moveToward(g,POS.cashier.x-6-idx*6,POS.cashier.y+7,CFG.custSpeed,dt);
+      g.patience-=dt*0.7;
+      if(g.patience<=-15) leaveAngry(g,"结账排太久，客人怒走");
+      break;}
+    case "leaving":{
+      if(moveToward(g,POS.entrance.x,POS.entrance.y+2,CFG.custSpeed*1.3,dt)) killGroup(g);
+      break;}
+  }
+  // 投诉触发
+  if(!g.complaining && g.sat<25 && ["scanning","qrStuck","ordered","eating","paying"].includes(g.state)){
+    g.complaining=true; G.complaints++;
+    say(`😡 ${g.type.k}顾客发火了！快去处理`);
+    const px=g.table?g.table.x:g.x, py=g.table?g.table.y:g.y;
+    addTask({type:"complain",ref:g,x:px,y:py,dy:-5,ico:"😡",label:"投诉",cls:"bad"});
+  }
+  // 耐心条
+  const bar=g.el.querySelector(".pbar i");
+  const pv=g.state==="eating"?g.sat/100:Math.max(0,g.patience/g.patienceMax);
+  bar.style.width=(pv*100)+"%"; bar.className=pv<0.3?"low":"";
+}
+function finishEating(g){
+  g.state="paying"; setBub(g,"💳");
+  const tb=g.table; tb.group=null;
+  startAutoFlow(tb);
+  if(!G.tasks.some(t=>t.type==="checkout"))
+    addTask({type:"checkout",ref:null,x:POS.cashier.x,y:POS.cashier.y,ico:"💳",label:"收银结账"});
+  // 移除残留 preclean 单
+  G.tasks.filter(t=>t.type==="pcPlates"&&t.ref===tb).forEach(removeTask);
+}
+function payGroup(g){
+  const bill=Math.round(g.size*CFG.priceHead*(g.type.tip||1)*(g.sat>75?1.1:1));
+  G.sales+=bill; G.served++;
+  pop(POS.cashier.x,POS.cashier.y-6,"+RM"+bill,"good");
+  pushReview(g);
+  g.state="leaving"; setBub(g,null);
+}
+function leaveAngry(g,msg){
+  if(g.state==="leaving")return;
+  say("💢 "+msg); G.complaints++;
+  pushReview(g,1);
+  if(g.table){ g.table.el.classList.remove("yellow");
+    if(g.table.group===g){g.table.group=null; startAutoFlow(g.table);}
+    else if(g.table.state==="reserved")g.table.state="ready"; }
+  if(g.guideTask) removeTask(g.guideTask);
+  G.tasks.filter(t=>t.ref===g).forEach(removeTask);
+  g.state="leaving";
+}
+function killGroup(g){
+  g.el.remove();
+  const i=G.groups.indexOf(g); if(i>=0)G.groups.splice(i,1);
+  refreshSeatTasks();
+}
+
+/* Host 是否在岗（任何空闲员工站在 Host 台附近即算） */
+function hostOnDuty(){
+  return G.staff.some(s=>s.state==="idle"&&s.stunT<=0&&dist(s,POS.host)<9);
+}
+/* 带位工单：有等位客 + 有 Ready 桌 时出现 */
+function refreshSeatTasks(){
+  const waiting=G.groups.filter(g=>g.state==="waiting");
+  const ready=G.tables.some(t=>t.state==="ready");
+  waiting.forEach(g=>{
+    const has=G.tasks.some(t=>t.type==="seat"&&t.ref===g);
+    if(ready&&!has) addTask({type:"seat",ref:g,x:g.x,y:g.y,ico:"🤝",label:"带位入座"});
+    if(!ready&&has) G.tasks.filter(t=>t.type==="seat"&&t.ref===g&&!t.assignee).forEach(removeTask);
+  });
+}
+
+/* ============================ KitchenSystem ============================ */
+function kitchenTick(dt){
+  const act={k:0,b:0}, slots={k:CFG.kitchenSlots, b:G.pile.b>=8?0:(G.pile.b>=5?1:CFG.barSlots)};
+  for(const o of G.cookQ){
+    if(o.done)continue;
+    if(!o.started){
+      if(act[o.st]<slots[o.st]){ o.started=true;
+        if(o.st==="k"&&Math.random()<CFG.missOrderRate){ o.dur+=8; say(`🍳 厨房漏单！T${o.g.table.i+1} 出餐延迟`);} }
+      else continue;
+    }
+    act[o.st]++;
+    o.t+=dt;
+    if(o.t>=o.dur){ o.done=true;
+      if(!o.g||o.g.state!=="ordered")continue;
+      const from=o.st==="k"?POS.kitchen:POS.drink;
+      const n=G.tasks.filter(t=>t.type==="deliver"&&t.kind===o.st).length;
+      addTask({type:"deliver",kind:o.st,from,ref:o.g,
+        x:from.x,y:from.y,dx:(n%3)*9,dy:-Math.floor(n/3)*1,
+        ico:o.st==="k"?"🍜":"🧋",label:"送 T"+(o.g.table.i+1)});
+    }
+  }
+  G.cookQ=G.cookQ.filter(o=>!o.done);
+}
+
+/* ============================ PreCleanSystem ============================ */
+function precleanDone(t){
+  const tb=t.ref, g=tb.group;
+  if(!g||g.state!=="eating"){ return; }
+  tb.pcPlates=true;
+  pop(tb.x,tb.y,"预收成功 · 翻台跳步","good");
+  updateTableItems(tb);
+}
+
+/* ============================ AutoFlowSystem ============================ */
+const FLOW_META=[null,
+  {ico:"🍛",label:"①收盘"},{ico:"🥤",label:"②收杯"},
+  {ico:"🫧",label:"③抹桌"},{ico:"📱",label:"④Reset QR"}];
+function startAutoFlow(tb){
+  tb.state="flow"; tb.el.className="table dirty";
+  tb.flowStart=G.t; tb.flowStepAt=G.t;
+  pop(tb.x,tb.y-5,"🔄 翻台开始！连点接力","combo");
+  tb.flowStep = tb.pcPlates ? 1 : 0;
+  if(tb.flowStep>0) pop(tb.x,tb.y,`Pre Clean 跳步→从第${tb.flowStep+1}步开始`,"good");
+  for(let s=tb.flowStep+1;s<=4;s++){
+    const m=FLOW_META[s];
+    addTask({type:"flow"+s,ref:tb,x:tb.x,y:tb.y,
+      dx:(s%2?-6.5:6.5), dy:(s<=2?1:9),
+      ico:m.ico,label:m.label,cls:s>tb.flowStep+1?"locked":""});
+  }
+  updateTableItems(tb); updateFlowTag(tb);
+}
+function flowStepDone(tb,step,staff){
+  tb.flowStep=step; tb.flowStepAt=G.t;
+  // 解锁下一步的样式
+  const nxt=G.tasks.find(t=>t.type==="flow"+(step+1)&&t.ref===tb);
+  if(nxt&&nxt.el) nxt.el.classList.remove("locked");
+  // 接力 combo
+  if(G.t-G.lastFlowDone<3 && G.lastFlowStaff && G.lastFlowStaff!==staff){
+    G.combo++; if(G.combo>=1) pop(tb.x,tb.y-6,`接力 ×${G.combo+1}!`,"combo");
+  } else G.combo=0;
+  G.lastFlowDone=G.t; G.lastFlowStaff=staff;
+  updateTableItems(tb); updateFlowTag(tb);
+  if(step===4) finishFlow(tb);
+}
+function updateFlowTag(tb){
+  const tag=tb.el.querySelector(".flowTag");
+  const steps=tb.el.querySelector(".steps");
+  if(tb.state!=="flow"){tag.style.display="none";steps.style.display="none";return;}
+  const el=G.t-tb.flowStart;
+  tag.style.display="block"; steps.style.display="flex";
+  tag.textContent=el.toFixed(0)+"s";
+  tag.className="flowTag "+(el<=CFG.flowExcellent?"g":el<=CFG.flowGood?"y":"r");
+  const kids=steps.children;
+  for(let i=0;i<4;i++) kids[i].className = i<tb.flowStep?"done": i===tb.flowStep?"cur":"";
+}
+function finishFlow(tb){
+  const dur=G.t-tb.flowStart;
+  let r,cls;
+  if(dur<=CFG.flowExcellent){r="Excellent";cls="good";G.flows.E++;G.reviews.push(5);}
+  else if(dur<=CFG.flowGood){r="Good";cls="good";G.flows.G++;}
+  else if(dur<=CFG.flowNormal){r="Normal";cls="";G.flows.N++;}
+  else {r="Poor";cls="bad";G.flows.P++;G.reviews.push(2);}
+  pop(tb.x,tb.y,`Auto Flow ${r} (${dur.toFixed(0)}s)`,cls);
+  tb.state="ready"; tb.el.className="table ready"; tb.flowStep=0;
+  tb.pcPlates=false;
+  tb.el.querySelector(".flowTag").style.display="none";
+  tb.el.querySelector(".steps").style.display="none";
+  tb.el.querySelector(".items").textContent="";
+  refreshSeatTasks();
+}
+
+/* ============================ YellowOrderSystem ============================ */
+function yellowTick(){
+  G.groups.forEach(g=>{
+    if(g.state!=="ordered")return;
+    const w=G.t-g.orderAt;
+    if(!g.yellow && w>CFG.yellowAt){
+      g.yellow=true; G.yellows++;
+      g.table.el.classList.add("yellow");
+      say(`🟨 黄单！T${g.table.i+1} 上菜超时，派人安抚 + 催厨房`);
+      addTask({type:"soothe",ref:g,x:g.table.x,y:g.table.y,dy:-5,ico:"🟨",label:"安抚",cls:"warn"});
+    }
+    if(g.yellow && w>CFG.blowUpAt && G.t-g.soothedAt>25){
+      G.yellowBlown++; leaveAngry(g,"黄单没人管，整桌怒走 + 差评");
+      g.table.el.classList.remove("yellow");
+    }
+  });
+}
+
+/* ============================ ChatSystem（Son&Yu） ============================ */
+function chatTick(dt){
+  const a=G.staff.find(s=>s.id==="sa"), b=G.staff.find(s=>s.id==="sb");
+  const chip=$("#chatAlert");
+  if(a.state==="chatting"&&b.state==="chatting"){
+    const mx=(POS.drink.x+POS.clean.x)/2, my=POS.drink.y+8;
+    moveToward(a,mx-3,my,20,dt); moveToward(b,mx+3,my,20,dt);
+    if(!G._chatWarn||G.t-G._chatWarn>6){ G._chatWarn=G.t; say("💬 Son 和 Yu 又聊起来了…其他人累得更快！"); }
+    setChatBub(a,true); setChatBub(b,true);
+    chip.style.display="block";
+    return;
+  }
+  chip.style.display="none";
+  setChatBub(a,a.state==="chatting"); setChatBub(b,b.state==="chatting");
+  if(a.state==="idle"&&b.state==="idle"&&a.idleT>CFG.chatIdle&&b.idleT>CFG.chatIdle&&!a.task&&!b.task){
+    a.state="chatting"; b.state="chatting";
+  }
+}
+$("#chatAlert").addEventListener("pointerdown",()=>{
+  if(!G||!G.running)return;
+  G.staff.forEach(s=>breakChat(s));
+  $("#chatAlert").style.display="none";
+});
+function setChatBub(s,on){
+  let bub=s.el.querySelector(".bub");
+  if(on){ if(!bub){bub=document.createElement("span");bub.className="bub";s.el.appendChild(bub);} bub.textContent="💬"; bub.style.display="block"; }
+  else if(bub) bub.style.display="none";
+}
+
+/* ============================ ReviewSystem ============================ */
+function pushReview(g,force){
+  let stars=force|| (g.sat>=85?5:g.sat>=65?4:g.sat>=45?3:g.sat>=25?2:1);
+  const n=(g.type.weight||1);
+  for(let i=0;i<n;i++)G.reviews.push(stars);
+  if(stars<=2)say(`⭐ 收到 ${stars} 星差评（${g.type.k}）`);
+  else if(stars===5&&g.type.weight)say(`🌟 ${g.type.k}给了 5 星好评，权重×2！`);
+}
+function avgStars(){ return G.reviews.reduce((a,b)=>a+b,0)/G.reviews.length; }
+
+/* ============================ SkillSystem ============================ */
+const SK={split:{cd:30},rush:{cd:50},calm:{cd:60}};
+document.querySelectorAll(".skill").forEach(el=>{
+  el.addEventListener("pointerdown",()=>{
+    if(!G||!G.running)return;
+    const k=el.dataset.sk;
+    if(G.skills[k]>0)return;
+    G.skills[k]=SK[k].cd;
+    if(k==="split"){ G.staff.forEach(s=>{breakChat(s); s.stamina=Math.min(100,s.stamina+12);}); say("🗣️ 主管喊话：都别聊了！全员回神 +体力"); }
+    if(k==="rush"){ G.boost=10; G.staff.forEach(s=>s.stamina=Math.max(5,s.stamina-12)); say("⚡ 全员冲刺 10 秒！（透支体力 -12）"); }
+    if(k==="calm"){ G.groups.forEach(g=>{g.patience=Math.min(g.patienceMax,g.patience+22);g.sat=Math.min(100,g.sat+10);}); say("🧯 主管逐桌打招呼，全场客人+耐心+满意度"); }
+  });
+});
+function skillTick(dt){
+  for(const k in G.skills){
+    if(G.skills[k]>0)G.skills[k]-=dt;
+    const el=document.querySelector(`.skill[data-sk=${k}] .cd`);
+    if(G.skills[k]>0){el.style.display="flex";el.textContent=Math.ceil(G.skills[k]);}
+    else el.style.display="none";
+  }
+  if(G.boost>0)G.boost-=dt;
+}
+
+/* ============================ Renderer / Deck / HUD ============================ */
+function renderPawns(){
+  G.staff.forEach(s=>{
+    s.el.style.left=s.x+"%"; s.el.style.top=s.y+"%";
+    if(!s.stbarEl)s.stbarEl=s.el.querySelector(".stbar i");
+    s.stbarEl.style.width=s.stamina+"%";
+    s.stbarEl.className=s.stamina<25?"low":s.stamina<55?"mid":"";
+  });
+  G.groups.forEach(g=>{
+    if(g.escort){g.x=g.escort.x+2.5;g.y=g.escort.y+3.5;}
+    g.el.style.left=g.x+"%"; g.el.style.top=g.y+"%";
+  });
+  G.tasks.forEach(t=>{ if(t.el&&(t.type==="seat"||t.type==="guide")&&t.ref){
+    t.el.style.left=t.ref.x+"%"; t.el.style.top=(t.ref.y-2)+"%"; }});
+}
+function taskName(t){
+  return {seat:"带位",guide:"劝导",deliver:"送餐",helpQR:"帮扫码",soothe:"安抚",complain:"处理投诉",
+    pcPlates:"预收盘",washC:"洗碗",washB:"洗杯",flow1:"收盘",flow2:"收杯",flow3:"抹桌",flow4:"ResetQR",checkout:"收银"}[t.type]||"工作";
+}
+function updateHUD(force){
+  G.hudT-=1/60;
+  if(!force&&G.hudT>0)return; G.hudT=0.25;
+  const gt=11*3600+G.t/CFG.duration*3*3600;
+  const h=Math.floor(gt/3600),m=Math.floor(gt%3600/60);
+  $("#hudTime").textContent=`${h}:${String(m).padStart(2,"0")}`;
+  $("#hudSales").textContent="RM "+G.sales;
+  $("#hudStars").textContent=avgStars().toFixed(1)+"★";
+  const w=G.groups.filter(g=>g.state==="waiting"||g.state==="wandering").length;
+  const wb=$("#hudWait"); wb.textContent=w; wb.className=w>=4?"hot":"";
+  $("#hudTurn").textContent=G.served;
+  $("#goalFill").style.width=Math.min(100,G.sales/CFG.salesGoal*100)+"%";
+  $("#goalTxt").textContent=`RM ${G.sales} / ${CFG.salesGoal}`;
+  // 黄单警示条
+  // 任务总览栏
+  const cnt={flow:0,pc:0,yel:0,cmp:0,qr:0};
+  G.tasks.forEach(t=>{ if(t.assignee)return;
+    if(t.type.startsWith("flow"))cnt.flow++;
+    else if(t.type.startsWith("pc"))cnt.pc++;
+    else if(t.type==="soothe")cnt.yel++;
+    else if(t.type==="complain")cnt.cmp++;
+    else if(t.type==="helpQR")cnt.qr++;
+  });
+  const tbEl=$("#taskbar");
+  if(tbEl)tbEl.innerHTML=
+    `<span>🔄翻台 <b>${cnt.flow}</b></span><span>🍽️预收 <b>${cnt.pc}</b></span>`+
+    `<span class="${cnt.yel?'w':''}">🟨黄单 <b>${cnt.yel}</b></span>`+
+    `<span class="${cnt.cmp?'r':''}">😡投诉 <b>${cnt.cmp}</b></span>`+
+    `<span class="${cnt.qr?'w':''}">📵扫码 <b>${cnt.qr}</b></span>`;
+  const yel=G.groups.filter(g=>g.yellow&&!g.delivered&&g.table);
+  const ya=$("#yellowAlert");
+  if(yel.length){ ya.style.display="block"; ya.textContent="🟨 YELLOW ORDER! "+yel.map(g=>"T"+(g.table.i+1)).join(" "); }
+  else ya.style.display="none";
+}
+
+/* ============================ ScoreSystem ============================ */
+function endGame(){
+  G.running=false; G.over=true;
+  const stars=avgStars();
+  const avgSta=G.staff.reduce((a,s)=>a+s.stamina,0)/G.staff.length;
+  const totalFlows=G.flows.E+G.flows.G+G.flows.N+G.flows.P;
+  // 各项 0~5 星
+  const S={
+    "销售 SALES": Math.min(5,G.sales/CFG.salesGoal*5),
+    "顾客满意 SATISFACTION": Math.max(0,(stars-1)/4*5),
+    "翻台 TURNOVER": Math.min(5,G.served/19*5),
+    "GOOGLE 评分": Math.max(0,(stars-1)/4*5),
+    "投诉控制 COMPLAINT": Math.max(0,5-G.complaints*0.8),
+    "SOP 合规": Math.max(0,5-G.sop),
+    "黄单处理 YELLOW": Math.max(0,5-G.yellowBlown*2-Math.max(0,G.yellows-4)*0.5),
+    "AUTO FLOW 效率": totalFlows?Math.max(0,Math.min(5,(G.flows.E*2+G.flows.G)/(totalFlows*2)*5+(G.flows.P?-1:0))):2.5,
+    "HOST 门口管理": Math.max(0,5-G.wanderIncidents*0.4),
+    "员工体力 ENERGY": avgSta/20,
+  };
+  const vals=Object.values(S);
+  const total=vals.reduce((a,b)=>a+b,0)/vals.length/5*100;
+  const grade=total>=85?"S":total>=68?"A":total>=52?"B":total>=36?"C":"D";
+  const word={S:"LEGENDARY!",A:"EXCELLENT!",B:"GOOD JOB",C:"KEEP GOING",D:"ROUGH DAY"}[grade];
+  $("#gradeBox").textContent=grade;
+  $("#gradeWord").textContent=word;
+  $("#endSub").textContent=`总分 ${total.toFixed(0)} / 100 · 午市打烊`;
+  $("#scoreRows").innerHTML=Object.entries(S).map(([k,v])=>{
+    const f=Math.max(0,Math.min(5,Math.round(v)));
+    return `<div><span>${k}</span><span class="stars">${"★".repeat(f)}${"☆".repeat(5-f)}</span></div>`;
+  }).join("");
+  $("#endStats").innerHTML=`
+    <div>销售额<b>RM ${G.sales}</b></div><div>翻台组数<b>${G.served}</b></div>
+    <div>Google评分<b>${stars.toFixed(1)}★</b></div><div>投诉<b>${G.complaints}</b></div>
+    <div>Auto Flow<b>E${G.flows.E} G${G.flows.G} N${G.flows.N} P${G.flows.P}</b></div>
+    <div>黄单/爆单<b>${G.yellows}/${G.yellowBlown}</b></div>
+    <div>顾客乱入<b>${G.wanderIncidents}</b></div><div>员工均体力<b>${avgSta.toFixed(0)}%</b></div>`;
+  $("#endOv").style.display="flex";
+}
+
+/* ============================ GameLoop ============================ */
+let last=0;
+function loop(ts){
+  const dt=Math.min(0.05,(ts-last)/1000); last=ts;
+  if(G&&G.running){
+    G.t+=dt;
+    if(G.t>=CFG.duration){ endGame(); }
+    else{
+      // 出客节奏：前段慢，午高峰快
+      G.spawnT-=dt;
+      const phase=G.t<60?9.5:G.t<300?8:10;
+      if(G.spawnT<=0){
+        if(G.groups.filter(g=>g.state==="waiting"||g.state==="wandering").length<5) spawnGroup();
+        G.spawnT=phase*rnd(0.8,1.2);
+      }
+      G.staff.forEach(s=>staffTick(s,dt));
+      G.groups.slice().forEach(g=>custTick(g,dt));
+      kitchenTick(dt); yellowTick(); chatTick(dt); skillTick(dt); autoTick(dt); stationTick();
+      refreshSeatTasks();
+      G.tables.forEach(tb=>{ if(tb.state==="flow")updateFlowTag(tb); });
+      renderBadges();
+      tickTicker(dt);
+    }
+    renderPawns(); updateHUD();
+  }
+  requestAnimationFrame(loop);
+}
+function startGame(){
+  $("#startOv").style.display="none";
+  newGame(); G.running=true;
+  say("🔔 11:00 开门！Lunch Rush 即将到来");
+}
+let _started=false;
+["pointerdown","click"].forEach(ev=>$("#startBtn").addEventListener(ev,()=>{ if(_started)return; _started=true; startGame(); }));
+function againGame(){
+  $("#endOv").style.display="none";
+  _started=true; newGame(); G.running=true;
+}
+["pointerdown","click"].forEach(ev=>$("#againBtn").addEventListener(ev,()=>againGame()));
+try{ newGame(); }catch(e){ window.dispatchEvent(new ErrorEvent("error",{message:"newGame失败: "+e.message})); }
+requestAnimationFrame(loop);
+
+</script>
+</body>
+</html>
