@@ -45,6 +45,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);
 #goalRow .bar{flex:1;height:8px;background:#1a1008;border:1px solid #503418;border-radius:4px;overflow:hidden}
 #goalRow .bar i{display:block;height:100%;background:linear-gradient(90deg,#4f8f3f,var(--green));width:0%}
 #goalRow b{color:var(--gold-bright);font-size:10px}
+#levelBadge{background:var(--red-deep);color:#ffe8c8;border:1px solid var(--gold);border-radius:5px;padding:1px 5px;font-weight:900;white-space:nowrap}
 #ticker{background:#1a1008;border-top:1px solid #3a2817;border-bottom:2px solid #3a2817;color:#d8c49a;font-size:10.5px;padding:3px 10px;white-space:nowrap;overflow:hidden;height:20px;line-height:14px;z-index:28}
 
 /* ---------- MAP ---------- */
@@ -238,7 +239,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);
     <div class="chip"><b id="hudWait">0</b><span>等位</span></div>
     <div class="chip"><b id="hudTurn">0</b><span>翻台</span></div>
   </div>
-  <div id="goalRow">🎯 今日目标 <div class="bar"><i id="goalFill"></i></div> <b id="goalTxt">RM 0 / 2200</b></div>
+  <div id="goalRow"><span id="levelBadge">LV.1</span> 🎯 今日目标 <div class="bar"><i id="goalFill"></i></div> <b id="goalTxt">RM 0 / 2200</b></div>
   <div id="ticker"><span id="tickerTxt">欢迎来到华美茶室！点桌子快派，拖小人指定派工。</span></div>
   <div id="mapWrap">
     <div id="map"></div>
@@ -262,6 +263,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);
         <div class="rule">🔄 客人离桌，<b>连点桌子四下</b>接力翻台，计时保持绿色=Excellent！</div>
         <div class="rule">🧹 桌子亮<b>绿色虚线</b>=可预收，点一下翻台跳步；系统不会替你预收。</div>
         <div class="rule">⚖️ 收盘堆去Cleaning、收杯堆回Bar，<b>堆满会卡产线</b>要派人洗；Son和Yu聊天要打散；⚡冲刺透支体力。</div>
+        <div class="rule">🏆 <b>5 个关卡</b>逐步加压：目标更高、出客更快、扫码失败和黄单更容易爆。</div>
       </div>
       <button class="bigBtn" id="startBtn">开 始 营 业</button>
     </div>
@@ -318,6 +320,20 @@ const CFG = {
   priceHead: 22,
   salesGoal: 1300,
 };
+const BASE_CFG = {...CFG};
+const LEVELS = [
+  {name:"开张试营", goal:1300, spawn:[9.5,8,10], maxWait:5, cfg:{}},
+  {name:"周末午市", goal:1650, spawn:[8,6.8,8.5], maxWait:5, cfg:{waitPatience:44, qrFailRate:.18, missOrderRate:.09, yellowAt:48, blowUpAt:78}},
+  {name:"旅游团到店", goal:2000, spawn:[7,5.7,7.5], maxWait:6, cfg:{waitPatience:40, scanTime:4.8, qrFailRate:.21, cookBase:13.5, missOrderRate:.11, yellowAt:44, blowUpAt:72}},
+  {name:"雨天爆场", goal:2350, spawn:[6.2,5,6.7], maxWait:6, cfg:{waitPatience:36, qrFailRate:.25, cookBase:14.5, barBase:6, missOrderRate:.14, yellowAt:40, blowUpAt:66, flowExcellent:10, flowGood:16, flowNormal:28}},
+  {name:"冠军午市", goal:2700, spawn:[5.4,4.4,6], maxWait:7, cfg:{waitPatience:32, scanTime:5.2, qrFailRate:.3, cookBase:16, barBase:6.5, kitchenSlots:3, missOrderRate:.17, yellowAt:36, blowUpAt:60, flowExcellent:9, flowGood:14, flowNormal:24}}
+];
+let currentLevel = 1;
+function getLevel(n=currentLevel){ return LEVELS[Math.max(0,Math.min(LEVELS.length-1,n-1))]; }
+function applyLevel(n){
+  const lv=getLevel(n);
+  Object.assign(CFG, BASE_CFG, lv.cfg, {salesGoal:lv.goal});
+}
 
 /* ============================ MapData ============================ */
 const POS = {
@@ -418,14 +434,17 @@ const rnd=(a,b)=>a+Math.random()*(b-a);
 const pick=a=>a[Math.floor(Math.random()*a.length)];
 let uid=0;
 
-function newGame(){
+function newGame(level=currentLevel){
+  currentLevel = Math.max(1,Math.min(LEVELS.length,level));
+  applyLevel(currentLevel);
+  const lv=getLevel(currentLevel);
   G = {
-    t:0, running:false, over:false,
+    t:0, running:false, over:false, level:currentLevel, levelName:lv.name, levelPassed:false,
     sales:0, served:0, complaints:0, sop:0, yellows:0, yellowBlown:0,
     reviews:[4,4,5,4,4],          // 开局基础评价
     flows:{E:0,G:0,N:0,P:0}, combo:0, lastFlowDone:-99, lastFlowStaff:null,
     staff:[], tables:[], groups:[], tasks:[], dishes:[], cookQ:[],
-    spawnT:2.5, selected:null, boost:0,
+    spawnT:2.5, selected:null, boost:0, spawnPlan:lv.spawn, maxWait:lv.maxWait,
     pile:{c:0,b:0},
     skills:{split:0,rush:0,calm:0},
     wanderIncidents:0, hudT:0,
@@ -906,7 +925,7 @@ function autoTick(dt){
 
 /* ============================ CustomerSystem ============================ */
 function spawnGroup(){
-  const size=pick([1,2,2,3,3,4]);
+  const size=pick(G.level>=4?[1,2,2,3,3,4,4]:G.level>=3?[1,2,2,3,3,4]:[1,2,2,3,3,4]);
   const type=weightedType();
   const g={id:++uid,size,type, x:POS.entrance.x,y:POS.entrance.y,
     state:"entering", patienceMax:CFG.waitPatience*(type.pat||1),
@@ -935,8 +954,13 @@ function spawnGroup(){
   }
 }
 function weightedType(){
-  const tot=CUST_TYPES.reduce((a,t)=>a+t.w,0); let r=Math.random()*tot;
-  for(const t of CUST_TYPES){ if((r-=t.w)<0)return t; } return CUST_TYPES[0];
+  const boosts=G.level>=5?{"急性子":2.3,"博主":2.2,"VIP":2.1,"老人":1.2}:
+    G.level>=4?{"急性子":2,"博主":1.8,"VIP":1.7,"老人":1.15}:
+    G.level>=3?{"急性子":1.65,"博主":1.45,"VIP":1.35,"老人":1.1}:
+    G.level>=2?{"急性子":1.35,"博主":1.2,"VIP":1.15}:{};
+  const weight=t=>t.w*(boosts[t.k]||1);
+  const tot=CUST_TYPES.reduce((a,t)=>a+weight(t),0); let r=Math.random()*tot;
+  for(const t of CUST_TYPES){ if((r-=weight(t))<0)return t; } return CUST_TYPES[0];
 }
 function waitingSlot(g){
   const idx=G.groups.filter(x=>x.state==="waiting").indexOf(g);
@@ -1290,6 +1314,8 @@ function updateHUD(force){
   $("#hudTime").textContent=`${h}:${String(m).padStart(2,"0")}`;
   $("#hudSales").textContent="RM "+G.sales;
   $("#hudStars").textContent=avgStars().toFixed(1)+"★";
+  const lvb=$("#levelBadge");
+  if(lvb)lvb.textContent=`LV.${G.level} ${G.levelName}`;
   const w=G.groups.filter(g=>g.state==="waiting"||g.state==="wandering").length;
   const wb=$("#hudWait"); wb.textContent=w; wb.className=w>=4?"hot":"";
   $("#hudTurn").textContent=G.served;
@@ -1339,10 +1365,11 @@ function endGame(){
   const vals=Object.values(S);
   const total=vals.reduce((a,b)=>a+b,0)/vals.length/5*100;
   const grade=total>=85?"S":total>=68?"A":total>=52?"B":total>=36?"C":"D";
+  G.levelPassed=total>=52;
   const word={S:"LEGENDARY!",A:"EXCELLENT!",B:"GOOD JOB",C:"KEEP GOING",D:"ROUGH DAY"}[grade];
   $("#gradeBox").textContent=grade;
   $("#gradeWord").textContent=word;
-  $("#endSub").textContent=`总分 ${total.toFixed(0)} / 100 · 午市打烊`;
+  $("#endSub").textContent=`LV.${G.level} ${G.levelName} · 总分 ${total.toFixed(0)} / 100 · ${G.levelPassed?"通关":"重试"}`;
   $("#scoreRows").innerHTML=Object.entries(S).map(([k,v])=>{
     const f=Math.max(0,Math.min(5,Math.round(v)));
     return `<div><span>${k}</span><span class="stars">${"★".repeat(f)}${"☆".repeat(5-f)}</span></div>`;
@@ -1352,7 +1379,9 @@ function endGame(){
     <div>Google评分<b>${stars.toFixed(1)}★</b></div><div>投诉<b>${G.complaints}</b></div>
     <div>Auto Flow<b>E${G.flows.E} G${G.flows.G} N${G.flows.N} P${G.flows.P}</b></div>
     <div>黄单/爆单<b>${G.yellows}/${G.yellowBlown}</b></div>
-    <div>顾客乱入<b>${G.wanderIncidents}</b></div><div>员工均体力<b>${avgSta.toFixed(0)}%</b></div>`;
+    <div>顾客乱入<b>${G.wanderIncidents}</b></div><div>关卡<b>LV.${G.level} / ${LEVELS.length}</b></div>
+    <div>员工均体力<b>${avgSta.toFixed(0)}%</b></div><div>下一步<b>${G.levelPassed?(G.level<LEVELS.length?"下一关":"已通关"):"重试本关"}</b></div>`;
+  $("#againBtn").textContent=G.levelPassed&&G.level<LEVELS.length?"下 一 关":G.levelPassed?"再 挑 战":"重 试 本 关";
   $("#endOv").style.display="flex";
 }
 
@@ -1366,9 +1395,9 @@ function loop(ts){
     else{
       // 出客节奏：前段慢，午高峰快
       G.spawnT-=dt;
-      const phase=G.t<60?9.5:G.t<300?8:10;
+      const phase=G.t<60?G.spawnPlan[0]:G.t<300?G.spawnPlan[1]:G.spawnPlan[2];
       if(G.spawnT<=0){
-        if(G.groups.filter(g=>g.state==="waiting"||g.state==="wandering").length<5) spawnGroup();
+        if(G.groups.filter(g=>g.state==="waiting"||g.state==="wandering").length<G.maxWait) spawnGroup();
         G.spawnT=phase*rnd(0.8,1.2);
       }
       G.staff.forEach(s=>staffTick(s,dt));
@@ -1385,14 +1414,16 @@ function loop(ts){
 }
 function startGame(){
   $("#startOv").style.display="none";
-  newGame(); G.running=true;
-  say("🔔 11:00 开门！Lunch Rush 即将到来");
+  newGame(currentLevel); G.running=true;
+  say(`🔔 LV.${G.level} ${G.levelName} 开始！Lunch Rush 即将到来`);
 }
 let _started=false;
 ["pointerdown","click"].forEach(ev=>$("#startBtn").addEventListener(ev,()=>{ if(_started)return; _started=true; startGame(); }));
 function againGame(){
   $("#endOv").style.display="none";
-  _started=true; newGame(); G.running=true;
+  if(G&&G.levelPassed) currentLevel = G.level<LEVELS.length ? G.level+1 : 1;
+  _started=true; newGame(currentLevel); G.running=true;
+  say(`🔔 LV.${G.level} ${G.levelName} 开始！`);
 }
 ["pointerdown","click"].forEach(ev=>$("#againBtn").addEventListener(ev,()=>againGame()));
 try{ newGame(); }catch(e){ window.dispatchEvent(new ErrorEvent("error",{message:"newGame失败: "+e.message})); }

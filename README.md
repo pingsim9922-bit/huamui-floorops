@@ -2,6 +2,8 @@
 
 Restaurant floor-ops simulation game for Hua Mui Kopitiam.
 
+The game now includes 5 progressive lunch-rush levels. Each level raises the sales target and increases pressure through faster customer arrivals, lower patience, more QR failures, tighter yellow-order timing, and heavier kitchen/bar delays.
+
 The current app is a pure static site:
 
 - `index.html` contains the full UI, styles, sprites, and game logic.
