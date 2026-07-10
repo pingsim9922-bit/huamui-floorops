@@ -270,7 +270,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);
         <div class="rule">👆 <b>点桌子</b>=就近快派；<b>拖小人到桌上</b>=指定派工（拖忙人=救火）；<b>拖到岗位牌</b>=顶岗守门/收银。</div>
         <div class="rule">🔄 客人离桌，<b>连点桌子四下</b>接力翻台，计时保持绿色=Excellent！</div>
         <div class="rule">🧹 桌子亮<b>绿色虚线</b>=可预收，点一下翻台跳步；系统不会替你预收。</div>
-        <div class="rule">⚖️ 收盘堆去Cleaning、收杯堆回Bar，<b>堆满会卡产线</b>要派人洗；Son和Yu聊天要打散；⚡冲刺透支体力。</div>
+        <div class="rule">⚖️ 收盘堆去Cleaning、收杯堆回Bar，<b>堆满会卡产线</b>要派人洗；Mika和Jojo聊天要打散；⚡冲刺透支体力。</div>
         <div class="rule">🏆 <b>7 个关卡</b>逐步加压：目标更高、出客更快、员工也会出现突发状况。</div>
         <div class="levelGrid" id="levelMenu"></div>
       </div>
@@ -860,6 +860,17 @@ function assign(s,task,auto){
   if(s.task){ // 救火：放回旧任务
     unassign(s.task); 
   }
+  G.tasks.forEach(t=>{
+    if(t!==task && t.assignee===s){
+      t.assignee=null;
+      if(t.el){
+        t.el.classList.add("pulse");
+        t.el.classList.remove("assigned");
+        const who=t.el.querySelector(".who");
+        if(who) who.textContent="";
+      }
+    }
+  });
   breakChat(s);
   if(!auto) s.recall=null;   // 手动改派=撤岗；自动岗位工作做完会回到顶岗点
   s.task=task; task.assignee=s; s.state="moving"; s.phase=0; s.workT=0;
@@ -871,7 +882,7 @@ function assign(s,task,auto){
   if(!auto) setSel(null);
 }
 function unassign(task){
-  if(task.assignee){ const s=task.assignee; s.task=null; s.state="idle"; s.el.querySelector(".work").style.display="none"; s.el.querySelector(".carry").textContent=""; }
+  if(task.assignee){ const s=task.assignee; if(s.task===task){ s.task=null; s.state="idle"; s.el.querySelector(".work").style.display="none"; s.el.querySelector(".carry").textContent=""; } }
   task.assignee=null;
   if(task.el){
     task.el.classList.add("pulse"); task.el.classList.remove("assigned");
@@ -1015,7 +1026,17 @@ function renderBadges(){
 function removeTask(t){
   if(t.el)t.el.remove();
   const i=G.tasks.indexOf(t); if(i>=0)G.tasks.splice(i,1);
-  if(t.assignee){const s=t.assignee;s.task=null;s.state="idle";s.el.querySelector(".work").style.display="none";s.el.querySelector(".carry").textContent="";}
+  const g=t.ref;
+  if(t.type==="seat"&&g){
+    if(g.escort===t.assignee) g.escort=null;
+    if(g.table&&g.table.state==="reserved"){
+      g.table.state="ready";
+      g.table=null;
+    }
+  }
+  if(t.type==="guide"&&g&&g.escort===t.assignee) g.escort=null;
+  if(t.assignee){const s=t.assignee;if(s.task===t){s.task=null;s.state="idle";s.el.querySelector(".work").style.display="none";s.el.querySelector(".carry").textContent="";}}
+  t.assignee=null;
 }
 function buildWaypoints(s,t){
   switch(t.type){
@@ -1297,6 +1318,7 @@ function custTick(g,dt){
   switch(g.state){
     case "entering": break;
     case "waiting":{
+      if(g.escort){ g.x=g.escort.x+2.5; g.y=g.escort.y+3.5; break; }
       const s=waitingSlot(g); moveToward(g,s.x,s.y,CFG.custSpeed,dt);
       g.patience-=dt;
       if(g.patience<=0){ leaveAngry(g,tr("msg.waitLeave")); }
