@@ -363,7 +363,8 @@ const I18N = {
     },
     cust:{normal:"普通",rush:"急性子",elder:"老人",blogger:"博主",vip:"VIP"},
     tasks:{seat:"带位",guide:"劝导",deliver:"送餐",helpQR:"帮扫码",soothe:"安抚",complain:"处理投诉",
-      pcPlates:"预收盘",washC:"洗碗",washB:"洗杯",flow1:"①收盘",flow2:"②收杯",flow3:"③抹桌",flow4:"④Reset QR",checkout:"收银结账",work:"工作",relay:"接力"},
+      pcPlates:"预收盘",washC:"洗碗",washB:"洗杯",flow1:"①收盘",flow2:"②收杯",flow3:"③抹桌",flow4:"④Reset QR",checkout:"收银结账",
+      takeaway:"外卖插单",fixMachine:"维修机器",work:"工作",relay:"接力"},
     msg:{
       dragPost:"把员工拖到这里 = 顶岗", hostPost:"（自动带位守门）", cashPost:"（自动结账）",
       dragHint:"把 {name} 拖到桌子 / 工单 / 岗位牌上", unavailable:"{name} 暂时不能派工",
@@ -392,7 +393,15 @@ const I18N = {
       goodReview:"🌟 {type}给了 5 星好评，权重×2！", splitSay:"🗣️ 主管喊话：都别聊了！全员回神 +体力",
       splitSlack:"🗣️ 主管喊话：其他人回神，Mika 和 Jojo 继续摆烂", rushSay:"⚡ 全员冲刺 10 秒！（透支体力 -12）",
       calmSay:"🧯 主管逐桌打招呼，全场客人+耐心+满意度", startSay:"🔔 LV.{lv} {name} 开始！Lunch Rush 即将到来",
-      restartSay:"🔔 LV.{lv} {name} 开始！", newGameFail:"newGame失败"
+      restartSay:"🔔 LV.{lv} {name} 开始！", newGameFail:"newGame失败",
+      eventRain:"🌧️ 雨天湿滑！{name}滑倒了，现场节奏被打断",
+      eventTour:"🚌 旅游团突然到店！等位区马上塞满",
+      eventKitchenRush:"🍳 厨房爆单！20秒内出餐位少一格，已下单餐点延迟",
+      eventTakeaway:"📦 外卖插单！厨房口多了一张急单",
+      eventVip:"⭐ VIP 到店！服务好会拉高评分，怠慢会很伤",
+      eventMachineBreak:"🛠️ 饮料机坏掉！派人维修前饮料暂停",
+      eventMachineFixed:"✅ 饮料机修好了，Bar恢复出杯",
+      takeawayDone:"外卖完成 +RM {amt}"
     },
     score:{sales:"销售 SALES",sat:"顾客满意 SATISFACTION",turn:"翻台 TURNOVER",google:"GOOGLE 评分",complaint:"投诉控制 COMPLAINT",sop:"SOP 合规",yellow:"黄单处理 YELLOW",flow:"AUTO FLOW 效率",host:"HOST 门口管理",energy:"员工体力 ENERGY"}
   },
@@ -426,7 +435,8 @@ const I18N = {
     },
     cust:{normal:"Regular",rush:"Impatient",elder:"Elder",blogger:"Blogger",vip:"VIP"},
     tasks:{seat:"Seat",guide:"Guide Back",deliver:"Deliver",helpQR:"Help QR",soothe:"Soothe",complain:"Resolve Complaint",
-      pcPlates:"Pre-clear",washC:"Wash Plates",washB:"Wash Cups",flow1:"①Plates",flow2:"②Cups",flow3:"③Wipe",flow4:"④Reset QR",checkout:"Checkout",work:"Work",relay:"Relay"},
+      pcPlates:"Pre-clear",washC:"Wash Plates",washB:"Wash Cups",flow1:"①Plates",flow2:"②Cups",flow3:"③Wipe",flow4:"④Reset QR",checkout:"Checkout",
+      takeaway:"Takeaway Rush",fixMachine:"Fix Machine",work:"Work",relay:"Relay"},
     msg:{
       dragPost:"Drag staff here = hold post", hostPost:" (auto seating)", cashPost:" (auto checkout)",
       dragHint:"Drag {name} to a table / chit / post", unavailable:"{name} is unavailable",
@@ -455,7 +465,15 @@ const I18N = {
       goodReview:"🌟 {type} gave a weighted 5-star review ×2!", splitSay:"🗣️ Captain call: stop chatting! Team focus + stamina",
       splitSlack:"🗣️ Captain call: others refocus. Mika and Jojo keep slacking.", rushSay:"⚡ Team rush for 10s! Stamina -12",
       calmSay:"🧯 Captain greets tables. All guests gain patience + satisfaction", startSay:"🔔 LV.{lv} {name} begins! Lunch Rush incoming",
-      restartSay:"🔔 LV.{lv} {name} begins!", newGameFail:"newGame failed"
+      restartSay:"🔔 LV.{lv} {name} begins!", newGameFail:"newGame failed",
+      eventRain:"🌧️ Rainy floor! {name} slipped and the room loses tempo",
+      eventTour:"🚌 Tour group just arrived! Waiting fills up fast",
+      eventKitchenRush:"🍳 Kitchen rush! Food capacity drops by one slot for 20s and current orders delay",
+      eventTakeaway:"📦 Takeaway cut-in! A rush order appears at the kitchen",
+      eventVip:"⭐ VIP arrived! Great service boosts reviews; neglect hurts",
+      eventMachineBreak:"🛠️ Drink machine broke! Drinks stop until someone repairs it",
+      eventMachineFixed:"✅ Drink machine fixed. Bar is back online",
+      takeawayDone:"Takeaway done +RM {amt}"
     },
     score:{sales:"SALES",sat:"SATISFACTION",turn:"TURNOVER",google:"GOOGLE RATING",complaint:"COMPLAINT CONTROL",sop:"SOP COMPLIANCE",yellow:"YELLOW ORDERS",flow:"AUTO FLOW",host:"HOST CONTROL",energy:"STAFF ENERGY"}
   }
@@ -746,9 +764,11 @@ function newGame(level=currentLevel){
     reviews:[4,4,5,4,4],          // 开局基础评价
     flows:{E:0,G:0,N:0,P:0}, combo:0, lastFlowDone:-99, lastFlowStaff:null,
     staff:[], tables:[], groups:[], tasks:[], dishes:[], cookQ:[],
-    spawnT:2.5, selected:null, boost:0, spawnPlan:lv.spawn, maxWait:lv.maxWait, nextSeatIndex:0,
+    spawnT:2.5, selected:null, boost:0, spawnPlan:lv.spawn, maxWait:lv.maxWait,
     pile:{c:0,b:0},
     skills:{split:0,rush:0,calm:0},
+    events:{deck:[], nextAt:rnd(38,72), fired:0, max:currentLevel>=5?4:currentLevel>=3?3:2},
+    kitchenSurge:0, machineBroken:false,
     wanderIncidents:0, hudT:0,
   };
   map.innerHTML="";
@@ -991,6 +1011,8 @@ function taskStillValid(t){
   if(t.type&&t.type.startsWith("flow"))return t.ref&&t.ref.state==="flow";
   if(t.type==="checkout")return G.groups.some(g=>g.state==="paying");
   if(t.type==="washC"||t.type==="washB")return true;
+  if(t.type==="takeaway")return true;
+  if(t.type==="fixMachine")return G.machineBroken;
   return true;
 }
 function rescueStuckStaff(s,dt){
@@ -1164,16 +1186,11 @@ function startWork(s,dur){
   if(s.stamina<20)s.workDur*=1.35;
 }
 function workBar(s){ const w=s.el.querySelector(".work"); if(s.state==="working"){w.style.display="block"; w.firstElementChild.style.width=Math.min(100,s.workT/s.workDur*100)+"%";} else w.style.display="none"; }
-function pickSeatTable(){
-  for(let offset=0;offset<G.tables.length;offset++){
-    const idx=(G.nextSeatIndex+offset)%G.tables.length;
-    const tb=G.tables[idx];
-    if(tb.state==="ready"){
-      G.nextSeatIndex=(idx+1)%G.tables.length;
-      return tb;
-    }
-  }
-  return null;
+function pickSeatTable(anchor){
+  const ready=G.tables.filter(tb=>tb.state==="ready");
+  if(!ready.length)return null;
+  ready.sort((a,b)=>dist(anchor||POS.host,a)-dist(anchor||POS.host,b)||a.i-b.i);
+  return ready[0];
 }
 
 function taskStep(s,dt){
@@ -1186,7 +1203,7 @@ function taskStep(s,dt){
       if(s.phase===0){ if(arriveWp()){ 
         const g=t.ref;
         if(g.state!=="waiting"&&g.state!=="wandering"){ removeTask(t); return; }
-        const tb=pickSeatTable();
+        const tb=pickSeatTable(s);
         if(!tb){ hint(tr("msg.noReady")); removeTask(t); return; }
         tb.state="reserved"; g.escort=s; g.table=tb; s.phase=1; s.wp=[{x:tb.x,y:tb.y}];
       }} else if(arriveWp()){
@@ -1254,6 +1271,24 @@ function taskStep(s,dt){
         removeTask(t);
       } }
       break;}
+    case "takeaway":{
+      if(s.phase===0){ if(arriveWp()){ startWork(s,2.4); s.phase=1; } }
+      else { s.workT+=dt; if(s.workT>=s.workDur){
+        const amt=18+Math.floor(rnd(0,10));
+        G.sales+=amt;
+        pop(t.x,t.y,tr("msg.takeawayDone",{amt}),"good");
+        removeTask(t);
+      } }
+      break;}
+    case "fixMachine":{
+      if(s.phase===0){ if(arriveWp()){ startWork(s,4.2); s.phase=1; } }
+      else { s.workT+=dt; if(s.workT>=s.workDur){
+        G.machineBroken=false;
+        say(tr("msg.eventMachineFixed"));
+        pop(t.x,t.y,"OK","good");
+        removeTask(t);
+      } }
+      break;}
     case "checkout":{
       if(s.phase===0){ if(arriveWp()){ s.phase=1; } }
       if(s.phase===1){
@@ -1315,6 +1350,70 @@ function specialTick(dt){
   }
 }
 
+/* ============================ RestaurantEvents ============================ */
+const RESTAURANT_EVENTS=["rainSlip","tourGroup","kitchenRush","takeaway","vipArrival","machineBreak"];
+function nextRestaurantEvent(){
+  if(!G.events.deck.length) G.events.deck=[...RESTAURANT_EVENTS].sort(()=>Math.random()-.5);
+  return G.events.deck.pop();
+}
+function restaurantEventTick(dt){
+  if(!G||!G.running)return;
+  if(G.kitchenSurge>0) G.kitchenSurge=Math.max(0,G.kitchenSurge-dt);
+  if(G.events.fired>=G.events.max)return;
+  if(G.t<G.events.nextAt)return;
+  triggerRestaurantEvent(nextRestaurantEvent());
+  G.events.fired++;
+  G.events.nextAt=G.t+rnd(52,88);
+}
+function triggerRestaurantEvent(kind){
+  if(kind==="rainSlip"){
+    const cands=G.staff.filter(s=>!isUnavailable(s)&&s.stunT<=0);
+    if(!cands.length)return;
+    const s=pick(cands);
+    releaseStaff(s);
+    s.stunT=2.6;
+    s.stamina=Math.max(0,s.stamina-8);
+    say(tr("msg.eventRain",{name:s.name}));
+    pop(s.x,s.y,"SLIP","bad");
+    return;
+  }
+  if(kind==="tourGroup"){
+    say(tr("msg.eventTour"));
+    spawnGroup({size:4,typeKey:"normal",forceWaiting:true});
+    spawnGroup({size:4,typeKey:"elder",forceWaiting:true});
+    if(G.level>=4) spawnGroup({size:3,typeKey:"blogger",forceWaiting:true});
+    return;
+  }
+  if(kind==="kitchenRush"){
+    G.kitchenSurge=20;
+    G.cookQ.forEach(o=>{ if(o.st==="k"&&!o.done) o.dur+=4; });
+    say(tr("msg.eventKitchenRush"));
+    pop(POS.kitchen.x,POS.kitchen.y,"RUSH","warn");
+    return;
+  }
+  if(kind==="takeaway"){
+    if(!G.tasks.some(t=>t.type==="takeaway")){
+      addTask({type:"takeaway",x:POS.kitchen.x,y:POS.kitchen.y+7,ico:"📦",cls:"warn"});
+    }
+    say(tr("msg.eventTakeaway"));
+    sfx("warn");
+    return;
+  }
+  if(kind==="vipArrival"){
+    spawnGroup({size:2,typeKey:"vip",forceWaiting:true});
+    say(tr("msg.eventVip"));
+    pop(POS.entrance.x,POS.entrance.y,"VIP","combo");
+    return;
+  }
+  if(kind==="machineBreak"){
+    if(G.machineBroken)return;
+    G.machineBroken=true;
+    addTask({type:"fixMachine",x:POS.drink.x,y:POS.drink.y+7,ico:"🛠️",cls:"bad"});
+    say(tr("msg.eventMachineBreak"));
+    sfx("bad");
+  }
+}
+
 /* ============================ AutoDutySystem ============================ */
 /* 全员自动工作：
    - Host 岗 / Cashier 岗：0.6 秒反应，自动带位 / 自动结账（谁站岗谁做）
@@ -1333,7 +1432,7 @@ function autoTick(dt){
   const co=G.tasks.find(t=>t.type==="checkout"&&!t.assignee&&t.age>0.6);
   if(co){ const s=idleAt(POS.cashier); if(s)assign(s,co,true); }
   // 全员自动接活
-  const prio={complain:0,soothe:1,helpQR:2,guide:3,deliver:4,flow1:5,flow2:5,flow3:5,flow4:5,washC:6,washB:6,checkout:7};
+  const prio={complain:0,fixMachine:1,soothe:2,helpQR:3,guide:4,takeaway:5,deliver:6,flow1:7,flow2:7,flow3:7,flow4:7,washC:8,washB:8,checkout:9};
   const open=G.tasks.filter(t=>!t.assignee && prio[t.type]!==undefined && t.age>(t.type.startsWith("wash")?5:2));
   open.sort((a,b)=>(prio[a.type]-prio[b.type])||(b.age-a.age));
   for(const t of open){
@@ -1352,9 +1451,9 @@ function autoTick(dt){
 }
 
 /* ============================ CustomerSystem ============================ */
-function spawnGroup(){
-  const size=pick(G.level>=4?[1,2,2,3,3,4,4]:G.level>=3?[1,2,2,3,3,4]:[1,2,2,3,3,4]);
-  const type=weightedType();
+function spawnGroup(opts={}){
+  const size=opts.size||pick(G.level>=4?[1,2,2,3,3,4,4]:G.level>=3?[1,2,2,3,3,4]:[1,2,2,3,3,4]);
+  const type=opts.typeKey?(CUST_TYPES.find(t=>t.key===opts.typeKey)||weightedType()):weightedType();
   const g={id:++uid,size,type, x:POS.entrance.x,y:POS.entrance.y,
     state:"entering", patienceMax:CFG.waitPatience*(type.pat||1),
     patience:CFG.waitPatience*(type.pat||1), sat:80, table:null,
@@ -1370,7 +1469,7 @@ function spawnGroup(){
   map.appendChild(el); g.el=el;
   G.groups.push(g);
   // Host 在岗？
-  if(!hostOnDuty() && Math.random()<0.35){
+  if(!opts.forceWaiting && !hostOnDuty() && Math.random()<0.35){
     g.state="wandering";
     const tb=pick(G.tables);
     g.tx=tb.x+rnd(-6,6); g.ty=tb.y+rnd(4,8);
@@ -1549,7 +1648,9 @@ function refreshSeatTasks(){
 
 /* ============================ KitchenSystem ============================ */
 function kitchenTick(dt){
-  const act={k:0,b:0}, slots={k:CFG.kitchenSlots, b:G.pile.b>=8?0:(G.pile.b>=5?1:CFG.barSlots)};
+  const kitchenSlots=G.kitchenSurge>0?Math.max(1,CFG.kitchenSlots-1):CFG.kitchenSlots;
+  const barSlots=G.machineBroken?0:(G.pile.b>=8?0:(G.pile.b>=5?1:CFG.barSlots));
+  const act={k:0,b:0}, slots={k:kitchenSlots, b:barSlots};
   for(const o of G.cookQ){
     if(o.done)continue;
     if(!o.started){
@@ -1855,7 +1956,7 @@ function loop(ts){
       }
       G.staff.forEach(s=>staffTick(s,dt));
       G.groups.slice().forEach(g=>custTick(g,dt));
-      kitchenTick(dt); yellowTick(); specialTick(dt); chatTick(dt); skillTick(dt); autoTick(dt); stationTick();
+      kitchenTick(dt); yellowTick(); specialTick(dt); restaurantEventTick(dt); chatTick(dt); skillTick(dt); autoTick(dt); stationTick();
       refreshSeatTasks();
       G.tables.forEach(tb=>{ if(tb.state==="flow")updateFlowTag(tb); });
       renderBadges();
