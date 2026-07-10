@@ -47,8 +47,12 @@ html,body{height:100%;overflow:hidden;background:var(--bg);
 #goalRow b{color:var(--gold-bright);font-size:10px}
 #levelBadge{background:var(--red-deep);color:#ffe8c8;border:1px solid var(--gold);border-radius:5px;padding:1px 5px;font-weight:900;white-space:nowrap}
 #ticker{background:#1a1008;border-top:1px solid #3a2817;border-bottom:2px solid #3a2817;color:#d8c49a;font-size:10.5px;padding:3px 10px;white-space:nowrap;overflow:hidden;height:20px;line-height:14px;z-index:28}
-.langToggle{position:absolute;right:8px;top:48px;z-index:130;background:#1a1008;color:var(--gold-bright);border:1px solid var(--gold);border-radius:7px;padding:4px 7px;font-size:10px;font-weight:900;letter-spacing:.5px;box-shadow:0 2px 0 #000;cursor:pointer}
-.langToggle:active{transform:translateY(2px);box-shadow:0 0 0 #000}
+.topToggle{position:absolute;top:48px;z-index:130;background:#1a1008;color:var(--gold-bright);border:1px solid var(--gold);border-radius:7px;padding:4px 7px;font-size:10px;font-weight:900;letter-spacing:.5px;box-shadow:0 2px 0 #000;cursor:pointer}
+.topToggle:active{transform:translateY(2px);box-shadow:0 0 0 #000}
+.langToggle{right:8px}
+.speedToggle{right:45px;min-width:32px}
+.restartToggle{right:86px;display:none;min-width:28px}
+.soundToggle{right:122px;min-width:28px}
 
 /* ---------- MAP ---------- */
 #mapWrap{flex:1;position:relative;overflow:hidden;border-top:2px solid var(--gold);border-bottom:2px solid var(--gold)}
@@ -80,6 +84,14 @@ html,body{height:100%;overflow:hidden;background:var(--bg);
 .table .top::after{content:"";position:absolute;left:-11px;top:50%;width:7px;height:18px;transform:translateY(-50%);background:#3a2314;border-radius:2px;box-shadow:79px 0 0 #3a2314}  /* 两侧板凳 */
 .table .num{position:absolute;top:-9px;left:-9px;background:#241608;color:var(--gold-bright);font-size:11px;font-weight:800;padding:1px 6px;border-radius:6px;border:1.5px solid var(--gold);line-height:1.5;z-index:2}
 .table .items{font-size:15px;letter-spacing:-2px;pointer-events:none}
+.table .tstatus{position:absolute;left:50%;bottom:0;transform:translateX(-50%);z-index:4;min-width:40px;max-width:74px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:#241608;color:#d8c49a;border:1px solid #503418;border-radius:5px;padding:1px 5px;font-size:8.5px;font-weight:900;letter-spacing:0;box-shadow:0 2px 0 rgba(0,0,0,.5);pointer-events:none}
+.table .tstatus.ready{color:#91e8aa;border-color:#2e6e3a}
+.table .tstatus.scan{color:#9edcff;border-color:#37728b}
+.table .tstatus.wait{color:#ffd88a;border-color:#8a6200}
+.table .tstatus.eat{color:#f0e2c8;border-color:#8a6b3a}
+.table .tstatus.pre{color:#95e5b0;border-color:#2e8f50;background:#1d321e}
+.table .tstatus.pay{color:#ffd257;border-color:var(--gold)}
+.table .tstatus.reset{color:#ffb19f;border-color:var(--red)}
 .table.ready .top{box-shadow:0 3px 0 #241305,0 0 0 2px var(--green),0 0 10px rgba(88,196,112,.6)}
 .table.dirty .top{filter:brightness(.7) saturate(.7)}
 .table.yellow .top{box-shadow:0 3px 0 #241305,0 0 0 2px var(--amber),0 0 12px var(--amber)}
@@ -238,7 +250,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);
 </head>
 <body>
 <div id="app">
-  <button class="langToggle" id="langToggle" type="button">EN</button>
+  <button class="topToggle restartToggle" id="restartToggle" type="button" title="Restart level">↻</button>
+  <button class="topToggle soundToggle" id="soundToggle" type="button" title="Sound">🔇</button>
+  <button class="topToggle speedToggle" id="speedToggle" type="button">1x</button>
+  <button class="topToggle langToggle" id="langToggle" type="button">EN</button>
   <div id="hud">
     <div id="logo"><b>HUA MUI<br>FLOW MASTER</b><span>KOPITIAM</span></div>
     <div class="chip"><b id="hudTime">11:00</b><span>LUNCH RUSH</span></div>
@@ -313,6 +328,10 @@ window.addEventListener("error",e=>{
 
 /* ============================ I18n ============================ */
 let LANG = localStorage.getItem("hmfm_lang") || "zh";
+let GAME_SPEED = Number(localStorage.getItem("hmfm_speed") || 1);
+if(![1,2].includes(GAME_SPEED)) GAME_SPEED = 1;
+let SOUND_ON = localStorage.getItem("hmfm_sound") === "1";
+let audioCtx = null;
 const I18N = {
   zh:{
     ui:{
@@ -333,7 +352,8 @@ const I18N = {
       pass:"通关", fail:"重试", score:"总分", next:"下一步", cleared:"已通关",
       salesAmt:"销售额", served:"翻台组数", complaints:"投诉", yellowBlown:"黄单/爆单",
       wander:"顾客乱入", level:"关卡", energy:"员工均体力",
-      taskFlow:"翻台", taskPc:"预收", taskYellow:"黄单", taskComplain:"投诉", taskQr:"扫码"
+      taskFlow:"翻台", taskPc:"预收", taskYellow:"黄单", taskComplain:"投诉", taskQr:"扫码",
+      tableReady:"空桌", tableScan:"扫码", tableWait:"等餐", tableEat:"用餐", tablePre:"可预收", tablePay:"结账", tableReset:"翻台"
     },
     levels:["开张试营","周末午市","旅游团到店","雨天爆场","冠军午市","厕所危机","摆烂午市"],
     stations:{KITCHEN:"厨房",BAR:"吧台",CLEANING:"清洁站",CASHIER:"收银台",HOST:"迎宾岗",ENTRANCE:"入口",WAITING:"等位区"},
@@ -395,7 +415,8 @@ const I18N = {
       pass:"passed", fail:"retry", score:"Score", next:"Next", cleared:"cleared",
       salesAmt:"Sales", served:"Tables Served", complaints:"Complaints", yellowBlown:"Yellow/Blown",
       wander:"Walk-ins", level:"Level", energy:"Avg Energy",
-      taskFlow:"Reset", taskPc:"Pre-clear", taskYellow:"Yellow", taskComplain:"Complaint", taskQr:"QR"
+      taskFlow:"Reset", taskPc:"Pre-clear", taskYellow:"Yellow", taskComplain:"Complaint", taskQr:"QR",
+      tableReady:"Ready", tableScan:"QR", tableWait:"Waiting", tableEat:"Eating", tablePre:"Pre-clear", tablePay:"Paying", tableReset:"Reset"
     },
     levels:["Soft Opening","Weekend Lunch","Tour Group Rush","Rainy Full House","Champion Lunch","Toilet Crisis","Slack-Off Shift"],
     stations:{KITCHEN:"KITCHEN",BAR:"BAR",CLEANING:"CLEANING",CASHIER:"CASHIER",HOST:"HOST",ENTRANCE:"ENTRANCE",WAITING:"WAITING"},
@@ -462,6 +483,8 @@ function taskLabel(t){
 function applyI18n(){
   document.documentElement.lang=LANG==="zh"?"zh":"en";
   const btn=$("#langToggle"); if(btn)btn.textContent=tr("ui.langBtn");
+  updateSpeedButton();
+  updateSoundButton();
   const chips=document.querySelectorAll("#hud .chip span");
   ["lunch","sales","google","wait","turn"].forEach((k,i)=>{ if(chips[i])chips[i].textContent=tr("ui."+k); });
   const goal=$("#goalRow"); if(goal)goal.childNodes[1].textContent=" "+tr("ui.goal")+" ";
@@ -497,6 +520,65 @@ document.getElementById("langToggle").addEventListener("pointerdown",e=>{
   LANG=LANG==="zh"?"en":"zh";
   localStorage.setItem("hmfm_lang",LANG);
   applyI18n();
+});
+function updateSpeedButton(){
+  const btn=document.getElementById("speedToggle");
+  if(btn)btn.textContent=GAME_SPEED+"x";
+}
+document.getElementById("speedToggle").addEventListener("pointerdown",e=>{
+  e.preventDefault();
+  GAME_SPEED = GAME_SPEED===1 ? 2 : 1;
+  localStorage.setItem("hmfm_speed",String(GAME_SPEED));
+  updateSpeedButton();
+});
+function updateSoundButton(){
+  const btn=document.getElementById("soundToggle");
+  if(btn)btn.textContent=SOUND_ON?"🔊":"🔇";
+}
+function ensureAudio(){
+  if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==="suspended") audioCtx.resume();
+  return audioCtx;
+}
+function playTone(freq,dur=0.08,type="square",gain=0.035,delay=0){
+  if(!SOUND_ON)return;
+  try{
+    const ctx=ensureAudio();
+    const t=ctx.currentTime+delay;
+    const osc=ctx.createOscillator();
+    const vol=ctx.createGain();
+    osc.type=type; osc.frequency.setValueAtTime(freq,t);
+    vol.gain.setValueAtTime(0.0001,t);
+    vol.gain.exponentialRampToValueAtTime(gain,t+0.012);
+    vol.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    osc.connect(vol); vol.connect(ctx.destination);
+    osc.start(t); osc.stop(t+dur+0.02);
+  }catch(_){}
+}
+function sfx(kind){
+  if(kind==="tap") playTone(520,0.045,"square",0.025);
+  if(kind==="assign"){ playTone(520,0.045,"square",0.03); playTone(780,0.06,"square",0.025,0.055); }
+  if(kind==="good"){ playTone(660,0.055,"triangle",0.035); playTone(990,0.08,"triangle",0.03,0.07); }
+  if(kind==="bad"){ playTone(180,0.12,"sawtooth",0.04); playTone(130,0.16,"sawtooth",0.035,0.1); }
+  if(kind==="warn"){ playTone(760,0.08,"square",0.035); playTone(760,0.08,"square",0.035,0.16); }
+  if(kind==="start"){ playTone(440,0.05,"triangle",0.03); playTone(660,0.05,"triangle",0.03,0.06); playTone(880,0.08,"triangle",0.03,0.12); }
+  if(kind==="result"){ playTone(660,0.08,"triangle",0.03); playTone(880,0.08,"triangle",0.03,0.09); playTone(1100,0.12,"triangle",0.03,0.18); }
+  if(kind==="skill"){ playTone(360,0.05,"sine",0.035); playTone(720,0.12,"sine",0.03,0.05); }
+}
+document.getElementById("soundToggle").addEventListener("pointerdown",e=>{
+  e.preventDefault();
+  SOUND_ON=!SOUND_ON;
+  localStorage.setItem("hmfm_sound",SOUND_ON?"1":"0");
+  updateSoundButton();
+  if(SOUND_ON) sfx("start");
+});
+function setRestartVisible(on){
+  const btn=document.getElementById("restartToggle");
+  if(btn)btn.style.display=on?"block":"none";
+}
+document.getElementById("restartToggle").addEventListener("pointerdown",e=>{
+  e.preventDefault();
+  restartCurrentLevel();
 });
 
 /* ============================ CONFIG ============================ */
@@ -664,7 +746,7 @@ function newGame(level=currentLevel){
     reviews:[4,4,5,4,4],          // 开局基础评价
     flows:{E:0,G:0,N:0,P:0}, combo:0, lastFlowDone:-99, lastFlowStaff:null,
     staff:[], tables:[], groups:[], tasks:[], dishes:[], cookQ:[],
-    spawnT:2.5, selected:null, boost:0, spawnPlan:lv.spawn, maxWait:lv.maxWait,
+    spawnT:2.5, selected:null, boost:0, spawnPlan:lv.spawn, maxWait:lv.maxWait, nextSeatIndex:0,
     pile:{c:0,b:0},
     skills:{split:0,rush:0,calm:0},
     wanderIncidents:0, hudT:0,
@@ -693,7 +775,7 @@ function newGame(level=currentLevel){
     const el=document.createElement("div");
     el.className="table ready";
     el.style.left=p.x+"%"; el.style.top=p.y+"%";
-    el.innerHTML=`<div class="top"><span class="num">T${i+1}</span><span class="items"></span><div class="steps" style="display:none"><i></i><i></i><i></i><i></i></div></div><div class="flowTag" style="display:none"></div><div class="tbadge" style="display:none"></div>`;
+    el.innerHTML=`<div class="top"><span class="num">T${i+1}</span><span class="items"></span><div class="steps" style="display:none"><i></i><i></i><i></i><i></i></div></div><div class="tstatus ready"></div><div class="flowTag" style="display:none"></div><div class="tbadge" style="display:none"></div>`;
     map.appendChild(el);
     const tb={i, x:p.x, y:p.y, el, badgeEl:el.querySelector(".tbadge"), _bk:null, state:"ready", group:null,
       pcPlates:false, flowStep:0, flowStart:0};
@@ -714,6 +796,7 @@ function newGame(level=currentLevel){
     el.addEventListener("pointerdown",e=>{e.stopPropagation();startDragCandidate(s,e);});
     G.staff.push(s);
   });
+  G.tables.forEach(updateTableStatus);
   updateHUD(true);
 }
 
@@ -726,6 +809,8 @@ function tickTicker(dt){
   if(tickerT<=0 && tickerQ.length){ $("#tickerTxt").textContent=tickerQ.shift(); tickerT=2.4; }
 }
 function pop(x,y,txt,cls=""){
+  if(cls==="good"||cls==="combo")sfx("good");
+  if(cls==="bad")sfx("bad");
   const d=document.createElement("div");
   d.className="pop "+cls; d.textContent=txt;
   d.style.left=x+"%"; d.style.top=y+"%";
@@ -826,12 +911,14 @@ function dropOn(s,h){
   }
   if(h.kind==="chit"){
     assign(s,h.task);
+    sfx("assign");
     pop(h.task.x,h.task.y-3,`${s.name} → ${taskName(h.task)}`,"good");
     return;
   }
   const open=tasksForTable(h.tb).filter(t=>!t.assignee);
   if(!open.length){ hint(tr("msg.noTableWork",{n:h.tb.i+1})); return; }
   assign(s,open[0]);
+  sfx("assign");
   pop(h.tb.x,h.tb.y,`${s.name} → ${taskName(open[0])}`,"good");
 }
 function setSel(){ /* 选择模式已由拖拽取代 */ }
@@ -967,6 +1054,7 @@ function addTask(t){
     const s=nearestIdle(t.x,t.y,t.type==="checkout"||t.type==="seat");
     if(!s){ hint(tr("msg.noIdle")); return; }
     assign(s,t,true);
+    sfx("assign");
     pop(t.x,t.y-3,`${s.name} → ${taskName(t)}`,"good");
   });
   t.el=el; map.appendChild(el);
@@ -995,10 +1083,34 @@ function tableTap(tb){
   const s=nearestIdle(tb.x,tb.y);
   if(!s){ hint(tr("msg.noIdle")); return; }
   assign(s,open[0],true);
+  sfx("assign");
   pop(tb.x,tb.y,`${s.name} → ${taskName(open[0])}`,"good");
+}
+function tableStatusMeta(tb){
+  const paying=G.groups&&G.groups.some(g=>g.lastTable===tb&&g.state==="paying");
+  if(paying) return {cls:"pay", label:tr("ui.tablePay")};
+  if(tb.state==="flow"||tb.state==="dirty") return {cls:"reset", label:tr("ui.tableReset")};
+  if(tb.state==="reserved") return {cls:"scan", label:tr("ui.tableScan")};
+  const g=tb.group;
+  if(!g) return {cls:"ready", label:tr("ui.tableReady")};
+  if(g.state==="scanning"||g.state==="qrStuck") return {cls:"scan", label:tr("ui.tableScan")};
+  if(g.state==="ordered") return {cls:"wait", label:tr("ui.tableWait")};
+  if(g.state==="eating"){
+    const canPre=tb.pcPlates || (g.eatDur && g.eatT/g.eatDur>=CFG.precleanSafe);
+    return canPre ? {cls:"pre", label:tr("ui.tablePre")} : {cls:"eat", label:tr("ui.tableEat")};
+  }
+  return {cls:"ready", label:tr("ui.tableReady")};
+}
+function updateTableStatus(tb){
+  const el=tb.el&&tb.el.querySelector(".tstatus");
+  if(!el)return;
+  const meta=tableStatusMeta(tb);
+  el.textContent=meta.label;
+  el.className="tstatus "+meta.cls;
 }
 function renderBadges(){
   G.tables.forEach(tb=>{
+    updateTableStatus(tb);
     const list=tasksForTable(tb);
     const el=tb.badgeEl;
     tb.el.classList.toggle("hasOpen",list.some(x=>!x.assignee));
@@ -1052,6 +1164,17 @@ function startWork(s,dur){
   if(s.stamina<20)s.workDur*=1.35;
 }
 function workBar(s){ const w=s.el.querySelector(".work"); if(s.state==="working"){w.style.display="block"; w.firstElementChild.style.width=Math.min(100,s.workT/s.workDur*100)+"%";} else w.style.display="none"; }
+function pickSeatTable(){
+  for(let offset=0;offset<G.tables.length;offset++){
+    const idx=(G.nextSeatIndex+offset)%G.tables.length;
+    const tb=G.tables[idx];
+    if(tb.state==="ready"){
+      G.nextSeatIndex=(idx+1)%G.tables.length;
+      return tb;
+    }
+  }
+  return null;
+}
 
 function taskStep(s,dt){
   const t=s.task; if(!t)return;
@@ -1063,7 +1186,7 @@ function taskStep(s,dt){
       if(s.phase===0){ if(arriveWp()){ 
         const g=t.ref;
         if(g.state!=="waiting"&&g.state!=="wandering"){ removeTask(t); return; }
-        const tb=G.tables.find(x=>x.state==="ready");
+        const tb=pickSeatTable();
         if(!tb){ hint(tr("msg.noReady")); removeTask(t); return; }
         tb.state="reserved"; g.escort=s; g.table=tb; s.phase=1; s.wp=[{x:tb.x,y:tb.y}];
       }} else if(arriveWp()){
@@ -1365,6 +1488,7 @@ function custTick(g,dt){
   // 投诉触发
   if(!g.complaining && g.sat<25 && ["scanning","qrStuck","ordered","eating","paying"].includes(g.state)){
     g.complaining=true; G.complaints++;
+    sfx("bad");
     say(tr("msg.angry",{type:customerLabel(g.type.key)}));
     const px=g.table?g.table.x:g.x, py=g.table?g.table.y:g.y;
     addTask({type:"complain",ref:g,x:px,y:py,dy:-5,ico:"😡",label:"投诉",cls:"bad"});
@@ -1376,7 +1500,7 @@ function custTick(g,dt){
 }
 function finishEating(g){
   g.state="paying"; setBub(g,"💳");
-  const tb=g.table; tb.group=null;
+  const tb=g.table; g.lastTable=tb; tb.group=null;
   startAutoFlow(tb);
   if(!G.tasks.some(t=>t.type==="checkout"))
     addTask({type:"checkout",ref:null,x:POS.cashier.x,y:POS.cashier.y,ico:"💳",label:tr("msg.checkout")});
@@ -1388,10 +1512,11 @@ function payGroup(g){
   G.sales+=bill; G.served++;
   pop(POS.cashier.x,POS.cashier.y-6,"+RM"+bill,"good");
   pushReview(g);
-  g.state="leaving"; setBub(g,null);
+  g.state="leaving"; g.lastTable=null; setBub(g,null);
 }
 function leaveAngry(g,msg){
   if(g.state==="leaving")return;
+  sfx("bad");
   say(tr("msg.angryPrefix")+msg); G.complaints++;
   pushReview(g,1);
   if(g.table){ g.table.el.classList.remove("yellow");
@@ -1521,6 +1646,7 @@ function yellowTick(){
     if(!g.yellow && w>CFG.yellowAt){
       g.yellow=true; G.yellows++;
       g.table.el.classList.add("yellow");
+      sfx("warn");
       say(tr("msg.yellow",{n:g.table.i+1}));
       addTask({type:"soothe",ref:g,x:g.table.x,y:g.table.y,dy:-5,ico:"🟨",label:"安抚",cls:"warn"});
     }
@@ -1590,6 +1716,7 @@ document.querySelectorAll(".skill").forEach(el=>{
     const k=el.dataset.sk;
     if(G.skills[k]>0)return;
     G.skills[k]=SK[k].cd;
+    sfx("skill");
     if(k==="split"&&G.slackers){
       G.staff.forEach(s=>{ if(!isChatter(s)){ breakChat(s); s.stamina=Math.min(100,s.stamina+12); } });
       say(tr("msg.splitSlack"));
@@ -1670,6 +1797,7 @@ function updateHUD(force){
 /* ============================ ScoreSystem ============================ */
 function endGame(){
   G.running=false; G.over=true;
+  sfx("result");
   const stars=avgStars();
   const avgSta=G.staff.reduce((a,s)=>a+s.stamina,0)/G.staff.length;
   const totalFlows=G.flows.E+G.flows.G+G.flows.N+G.flows.P;
@@ -1706,13 +1834,14 @@ function endGame(){
     <div>${tr("ui.wander")}<b>${G.wanderIncidents}</b></div><div>${tr("ui.level")}<b>LV.${G.level} / ${LEVELS.length}</b></div>
     <div>${tr("ui.energy")}<b>${avgSta.toFixed(0)}%</b></div><div>${tr("ui.next")}<b>${G.levelPassed?(G.level<LEVELS.length?tr("ui.nextLevel"):tr("ui.cleared")):tr("ui.retry")}</b></div>`;
   $("#againBtn").textContent=G.levelPassed&&G.level<LEVELS.length?tr("ui.nextLevel"):G.levelPassed?tr("ui.challenge"):tr("ui.retry");
+  setRestartVisible(true);
   $("#endOv").style.display="flex";
 }
 
 /* ============================ GameLoop ============================ */
 let last=0;
 function loop(ts){
-  const dt=Math.min(0.05,(ts-last)/1000); last=ts;
+  const dt=Math.min(0.05,(ts-last)/1000)*GAME_SPEED; last=ts;
   if(G&&G.running){
     G.t+=dt;
     if(G.t>=CFG.duration){ endGame(); }
@@ -1738,7 +1867,10 @@ function loop(ts){
 }
 function startGame(){
   $("#startOv").style.display="none";
+  $("#endOv").style.display="none";
   newGame(currentLevel); G.running=true;
+  setRestartVisible(true);
+  sfx("start");
   say(tr("msg.startSay",{lv:G.level,name:G.levelName}));
 }
 let _started=false;
@@ -1746,10 +1878,23 @@ let _started=false;
 function againGame(){
   $("#endOv").style.display="none";
   if(G&&G.levelPassed) currentLevel = G.level<LEVELS.length ? G.level+1 : 1;
-  _started=true; newGame(currentLevel); G.running=true;
+  _started=true; newGame(currentLevel); G.running=true; setRestartVisible(true); sfx("start");
   say(tr("msg.restartSay",{lv:G.level,name:G.levelName}));
 }
 ["pointerdown","click"].forEach(ev=>$("#againBtn").addEventListener(ev,()=>againGame()));
+function restartCurrentLevel(){
+  if(!G)return;
+  $("#startOv").style.display="none";
+  $("#endOv").style.display="none";
+  const level=G.level||currentLevel;
+  currentLevel=level;
+  _started=true;
+  newGame(level);
+  G.running=true;
+  setRestartVisible(true);
+  sfx("start");
+  say(tr("msg.restartSay",{lv:G.level,name:G.levelName}));
+}
 try{ newGame(); applyI18n(); }catch(e){ window.dispatchEvent(new ErrorEvent("error",{message:tr("msg.newGameFail")+": "+e.message})); }
 requestAnimationFrame(loop);
 
