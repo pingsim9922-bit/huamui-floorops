@@ -47,6 +47,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);
 #goalRow b{color:var(--gold-bright);font-size:10px}
 #levelBadge{background:var(--red-deep);color:#ffe8c8;border:1px solid var(--gold);border-radius:5px;padding:1px 5px;font-weight:900;white-space:nowrap}
 #ticker{background:#1a1008;border-top:1px solid #3a2817;border-bottom:2px solid #3a2817;color:#d8c49a;font-size:10.5px;padding:3px 10px;white-space:nowrap;overflow:hidden;height:20px;line-height:14px;z-index:28}
+.langToggle{position:absolute;right:8px;top:48px;z-index:130;background:#1a1008;color:var(--gold-bright);border:1px solid var(--gold);border-radius:7px;padding:4px 7px;font-size:10px;font-weight:900;letter-spacing:.5px;box-shadow:0 2px 0 #000;cursor:pointer}
+.langToggle:active{transform:translateY(2px);box-shadow:0 0 0 #000}
 
 /* ---------- MAP ---------- */
 #mapWrap{flex:1;position:relative;overflow:hidden;border-top:2px solid var(--gold);border-bottom:2px solid var(--gold)}
@@ -236,6 +238,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);
 </head>
 <body>
 <div id="app">
+  <button class="langToggle" id="langToggle" type="button">EN</button>
   <div id="hud">
     <div id="logo"><b>HUA MUI<br>FLOW MASTER</b><span>KOPITIAM</span></div>
     <div class="chip"><b id="hudTime">11:00</b><span>LUNCH RUSH</span></div>
@@ -308,6 +311,194 @@ window.addEventListener("error",e=>{
 ===================================================================== */
 "use strict";
 
+/* ============================ I18n ============================ */
+let LANG = localStorage.getItem("hmfm_lang") || "zh";
+const I18N = {
+  zh:{
+    ui:{
+      langBtn:"EN", lunch:"午市高峰", sales:"销售", google:"GOOGLE", wait:"等位", turn:"翻台",
+      goal:"🎯 今日目标", welcome:"欢迎来到华美茶室！点桌子快派，拖小人指定派工。",
+      yellow:"🟨 黄单!", chat:"⚠️ 员工扎堆聊天 · 点此打散",
+      split:"打散聊天", rush:"全员冲刺", calm:"主管救火",
+      heroSub:"KOPITIAM · 外场主管 · 20 桌午市",
+      r1:"🤖 员工会自动工作，但只有「及格」水平——评级看你。",
+      r2:"👆 点桌子=就近快派；拖员工到桌上=指定派工；拖到岗位牌=顶岗守门/收银。",
+      r3:"🔄 客人离桌，连点桌子四下接力翻台，计时保持绿色=Excellent！",
+      r4:"🧹 桌子亮绿色虚线=可预收，点一下翻台跳步；系统不会替你预收。",
+      r5:"⚖️ 收盘堆去Cleaning、收杯堆回Bar，堆满会卡产线；Mika和Jojo聊天要打散；冲刺会透支体力。",
+      r6:"🏆 7 个关卡逐步加压：目标更高、出客更快、员工也会出现突发状况。",
+      start:"开 始 营 业", enter:"进 入", result:"TODAY'S RESULT", close:"打烊结算",
+      again:"再 来 一 轮", nextLevel:"下 一 关", challenge:"再 挑 战", retry:"重 试 本 关",
+      target:"目标", restroomTag:"员工厕所30秒", slackTag:"Mika/Jojo摆烂",
+      pass:"通关", fail:"重试", score:"总分", next:"下一步", cleared:"已通关",
+      salesAmt:"销售额", served:"翻台组数", complaints:"投诉", yellowBlown:"黄单/爆单",
+      wander:"顾客乱入", level:"关卡", energy:"员工均体力",
+      taskFlow:"翻台", taskPc:"预收", taskYellow:"黄单", taskComplain:"投诉", taskQr:"扫码"
+    },
+    levels:["开张试营","周末午市","旅游团到店","雨天爆场","冠军午市","厕所危机","摆烂午市"],
+    stations:{KITCHEN:"厨房",BAR:"吧台",CLEANING:"清洁站",CASHIER:"收银台",HOST:"迎宾岗",ENTRANCE:"入口",WAITING:"等位区"},
+    staff:{
+      host:{name:"阿岚",role:"楼面指挥"}, run:{name:"阿捷",role:"快跑传菜"}, rn2:{name:"俊豪",role:"巡场补位"},
+      sa:{name:"Mika",role:"桌边服务"}, sb:{name:"Jojo",role:"桌边服务"}, sc:{name:"明叔",role:"翻台清洁"}
+    },
+    cust:{normal:"普通",rush:"急性子",elder:"老人",blogger:"博主",vip:"VIP"},
+    tasks:{seat:"带位",guide:"劝导",deliver:"送餐",helpQR:"帮扫码",soothe:"安抚",complain:"处理投诉",
+      pcPlates:"预收盘",washC:"洗碗",washB:"洗杯",flow1:"①收盘",flow2:"②收杯",flow3:"③抹桌",flow4:"④Reset QR",checkout:"收银结账",work:"工作",relay:"接力"},
+    msg:{
+      dragPost:"把员工拖到这里 = 顶岗", hostPost:"（自动带位守门）", cashPost:"（自动结账）",
+      dragHint:"把 {name} 拖到桌子 / 工单 / 岗位牌上", unavailable:"{name} 暂时不能派工",
+      restroom:"{name} 去厕所了，还要 {sec} 秒", slacking:"{name} 摆烂中，本关不能派工",
+      post:"{name} 顶岗{name2}", postHost:"门口（自动带位）", postCash:"收银台（自动结账）",
+      noTableWork:"T{n} 暂无可派工作", allAssigned:"T{n} 的工作都有人负责了", noWork:"T{n} 暂无工作",
+      noIdle:"没有空闲员工了——拖忙碌员工过来救火", assigned:"这张单已有人负责",
+      selected:"👆 已选 {name} — 点亮边的桌子派工", chatBreak:"💬 聊天被打散了，大家松了口气",
+      slackNoBreak:"摆烂中：Mika 和 Jojo 本关不会听喊话", returnToilet:"🚻 {name} 回来了，可以继续派工",
+      stuck:"🛠️ {name} 卡住了，系统已自动重派 {task}", noReady:"暂时没有 Ready 的桌子",
+      guideBack:"🚶 乱入顾客被带回等位区", qrOk:"扫码OK", soothed:"已安抚", solved:"化解投诉",
+      dishWashed:"碗洗完了", cupWashed:"杯洗完了", spill:"太累打翻了!", pileMess:"💥 {name} 累到手滑打翻，{station}更乱了——该让TA歇歇",
+      cleanBurst:"🧼 清洁站爆了！抹桌变慢，快派人洗碗", barBurst:"🥤 Bar台杯子堆满！饮料停产，快派人洗杯",
+      toiletLeave:"🚻 {name} 去上厕所了，30 秒后回来！先重新调度其他员工",
+      wander:"⚠️ 门口没人！顾客自己乱走进来了", waitLeave:"等太久，客人走了",
+      wanderLeave:"乱入顾客没人理，走了", bump:"撞到了! 晕2秒", bumpSay:"💥 {name} 被乱入顾客挡住，Stun 2秒",
+      qrFail:"📵 T{n} 扫码失败，需要帮助", payLeave:"结账排太久，客人怒走",
+      angry:"😡 {type}顾客发火了！快去处理", drinkArrive:"🥤 饮料到", fastServe:"上菜快 +8",
+      precleanCue:"可预收", checkout:"收银结账", angryPrefix:"💢 ", kitchenMiss:"🍳 厨房漏单！T{n} 出餐延迟",
+      precleanDone:"预收成功 · 翻台跳步", flowStart:"🔄 翻台开始！连点接力",
+      precleanSkip:"Pre Clean 跳步→从第{n}步开始", relayCombo:"接力 ×{n}!", yellow:"🟨 黄单！T{n} 上菜超时，派人安抚 + 催厨房",
+      yellowLeave:"黄单没人管，整桌怒走 + 差评", slackChip:"⚠️ Mika 和 Jojo 摆烂中 · 本关不能打散",
+      slackWarn:"⚠️ LV.7：Mika 和 Jojo 摆烂，本关只能靠 4 名员工撑住",
+      chatChip:"⚠️ 员工扎堆聊天 · 点此打散", chatWarn:"💬 Mika 和 Jojo 又聊起来了…其他人累得更快！",
+      slackHint:"LV.7 摆烂状态不能打散，只能重新调度其他员工", badReview:"⭐ 收到 {stars} 星差评（{type}）",
+      goodReview:"🌟 {type}给了 5 星好评，权重×2！", splitSay:"🗣️ 主管喊话：都别聊了！全员回神 +体力",
+      splitSlack:"🗣️ 主管喊话：其他人回神，Mika 和 Jojo 继续摆烂", rushSay:"⚡ 全员冲刺 10 秒！（透支体力 -12）",
+      calmSay:"🧯 主管逐桌打招呼，全场客人+耐心+满意度", startSay:"🔔 LV.{lv} {name} 开始！Lunch Rush 即将到来",
+      restartSay:"🔔 LV.{lv} {name} 开始！", newGameFail:"newGame失败"
+    },
+    score:{sales:"销售 SALES",sat:"顾客满意 SATISFACTION",turn:"翻台 TURNOVER",google:"GOOGLE 评分",complaint:"投诉控制 COMPLAINT",sop:"SOP 合规",yellow:"黄单处理 YELLOW",flow:"AUTO FLOW 效率",host:"HOST 门口管理",energy:"员工体力 ENERGY"}
+  },
+  en:{
+    ui:{
+      langBtn:"中", lunch:"LUNCH RUSH", sales:"SALES", google:"GOOGLE", wait:"WAIT", turn:"TURNS",
+      goal:"🎯 TODAY'S TARGET", welcome:"Welcome to Hua Mui Kopitiam. Tap tables for quick dispatch, drag staff for precision.",
+      yellow:"🟨 YELLOW ORDER!", chat:"⚠️ Staff chatting · tap to break",
+      split:"Break Chat", rush:"Team Rush", calm:"Floor Save",
+      heroSub:"KOPITIAM · FLOOR CAPTAIN · 20-TABLE LUNCH",
+      r1:"🤖 Staff work automatically, but only at passable level. The final rating is on you.",
+      r2:"👆 Tap table=nearest dispatch; drag staff to table=direct assignment; drag to post=hold host/cashier.",
+      r3:"🔄 When guests leave, tap a table four times to relay the reset. Keep the timer green for Excellent.",
+      r4:"🧹 Green dashed table=pre-clear ready. Tap once to skip a reset step; the system will not pre-clear for you.",
+      r5:"⚖️ Plates stack at Cleaning, cups return to Bar. Full piles choke production; break up Mika and Jojo; Rush drains stamina.",
+      r6:"🏆 7 levels add pressure: bigger targets, faster arrivals, and surprise staff events.",
+      start:"START SERVICE", enter:"ENTER", result:"TODAY'S RESULT", close:"Closing Summary",
+      again:"PLAY AGAIN", nextLevel:"NEXT LEVEL", challenge:"CHALLENGE AGAIN", retry:"RETRY LEVEL",
+      target:"Target", restroomTag:"staff toilet 30s", slackTag:"Mika/Jojo slack off",
+      pass:"passed", fail:"retry", score:"Score", next:"Next", cleared:"cleared",
+      salesAmt:"Sales", served:"Tables Served", complaints:"Complaints", yellowBlown:"Yellow/Blown",
+      wander:"Walk-ins", level:"Level", energy:"Avg Energy",
+      taskFlow:"Reset", taskPc:"Pre-clear", taskYellow:"Yellow", taskComplain:"Complaint", taskQr:"QR"
+    },
+    levels:["Soft Opening","Weekend Lunch","Tour Group Rush","Rainy Full House","Champion Lunch","Toilet Crisis","Slack-Off Shift"],
+    stations:{KITCHEN:"KITCHEN",BAR:"BAR",CLEANING:"CLEANING",CASHIER:"CASHIER",HOST:"HOST",ENTRANCE:"ENTRANCE",WAITING:"WAITING"},
+    staff:{
+      host:{name:"Alana",role:"Floor Captain"}, run:{name:"Jett",role:"Hot Runner"}, rn2:{name:"Jun",role:"Zone Runner"},
+      sa:{name:"Mika",role:"Table Server"}, sb:{name:"Jojo",role:"Table Server"}, sc:{name:"Uncle Ming",role:"Reset Specialist"}
+    },
+    cust:{normal:"Regular",rush:"Impatient",elder:"Elder",blogger:"Blogger",vip:"VIP"},
+    tasks:{seat:"Seat",guide:"Guide Back",deliver:"Deliver",helpQR:"Help QR",soothe:"Soothe",complain:"Resolve Complaint",
+      pcPlates:"Pre-clear",washC:"Wash Plates",washB:"Wash Cups",flow1:"①Plates",flow2:"②Cups",flow3:"③Wipe",flow4:"④Reset QR",checkout:"Checkout",work:"Work",relay:"Relay"},
+    msg:{
+      dragPost:"Drag staff here = hold post", hostPost:" (auto seating)", cashPost:" (auto checkout)",
+      dragHint:"Drag {name} to a table / chit / post", unavailable:"{name} is unavailable",
+      restroom:"{name} is in the toilet. {sec}s left", slacking:"{name} is slacking this level",
+      post:"{name} holding {name2}", postHost:"host post", postCash:"cashier post",
+      noTableWork:"T{n} has no open work", allAssigned:"All work at T{n} is assigned", noWork:"No work at T{n}",
+      noIdle:"No idle staff. Drag a busy staff member over for a rescue", assigned:"This chit is already assigned",
+      selected:"👆 Selected {name} — tap a glowing table to dispatch", chatBreak:"💬 Chat broken up. Everyone snaps back.",
+      slackNoBreak:"Slack mode: Mika and Jojo will not listen this level", returnToilet:"🚻 {name} is back and can work again",
+      stuck:"🛠️ {name} got stuck. Auto-redispatched {task}", noReady:"No ready table available",
+      guideBack:"🚶 Wandering guests guided back to waiting", qrOk:"QR OK", soothed:"Soothed", solved:"Complaint resolved",
+      dishWashed:"Plates washed", cupWashed:"Cups washed", spill:"Too tired. Spilled!", pileMess:"💥 {name} slipped from fatigue. {station} is messier. Give them a breather.",
+      cleanBurst:"🧼 Cleaning is overloaded! Wiping slows down. Send someone to wash plates.", barBurst:"🥤 Bar cups are maxed! Drinks stop. Send someone to wash cups.",
+      toiletLeave:"🚻 {name} went to the toilet for 30s. Reassign the others first.",
+      wander:"⚠️ Nobody at host! Guests wandered in by themselves", waitLeave:"Guests waited too long and left",
+      wanderLeave:"Wandering guests were ignored and left", bump:"Blocked! Stunned 2s", bumpSay:"💥 {name} was blocked by wandering guests. Stunned 2s",
+      qrFail:"📵 T{n} QR failed. Help needed", payLeave:"Checkout queue too long. Guests left angry",
+      angry:"😡 {type} guests are upset! Handle it now", drinkArrive:"🥤 Drinks served", fastServe:"Fast serve +8",
+      precleanCue:"Pre-clear ready", checkout:"Checkout", angryPrefix:"💢 ", kitchenMiss:"🍳 Kitchen missed an order! T{n} delayed",
+      precleanDone:"Pre-clear done · reset step skipped", flowStart:"🔄 Reset started! Relay quickly",
+      precleanSkip:"Pre-clean skip → start from step {n}", relayCombo:"Relay ×{n}!", yellow:"🟨 Yellow order! T{n} is late. Soothe guests + chase kitchen",
+      yellowLeave:"Yellow order ignored. Whole table left angry + bad review", slackChip:"⚠️ Mika and Jojo slacking · cannot break this level",
+      slackWarn:"⚠️ LV.7: Mika and Jojo are slacking. Hold the shift with 4 staff.",
+      chatChip:"⚠️ Staff chatting · tap to break", chatWarn:"💬 Mika and Jojo are chatting again. Others tire faster!",
+      slackHint:"LV.7 slack mode cannot be broken. Reassign the other staff.", badReview:"⭐ Received a {stars}-star bad review ({type})",
+      goodReview:"🌟 {type} gave a weighted 5-star review ×2!", splitSay:"🗣️ Captain call: stop chatting! Team focus + stamina",
+      splitSlack:"🗣️ Captain call: others refocus. Mika and Jojo keep slacking.", rushSay:"⚡ Team rush for 10s! Stamina -12",
+      calmSay:"🧯 Captain greets tables. All guests gain patience + satisfaction", startSay:"🔔 LV.{lv} {name} begins! Lunch Rush incoming",
+      restartSay:"🔔 LV.{lv} {name} begins!", newGameFail:"newGame failed"
+    },
+    score:{sales:"SALES",sat:"SATISFACTION",turn:"TURNOVER",google:"GOOGLE RATING",complaint:"COMPLAINT CONTROL",sop:"SOP COMPLIANCE",yellow:"YELLOW ORDERS",flow:"AUTO FLOW",host:"HOST CONTROL",energy:"STAFF ENERGY"}
+  }
+};
+function tr(path, vars){
+  const parts=path.split(".");
+  let v=I18N[LANG];
+  for(const p of parts) v=v&&v[p];
+  if(v===undefined){
+    v=I18N.zh;
+    for(const p of parts) v=v&&v[p];
+  }
+  v=String(v===undefined?path:v);
+  if(vars) Object.entries(vars).forEach(([k,val])=>v=v.replaceAll(`{${k}}`,val));
+  return v;
+}
+function levelName(n=currentLevel){ return tr("levels."+(Math.max(1,n)-1)); }
+function staffLabel(id,field="name"){ return tr(`staff.${id}.${field}`); }
+function customerLabel(key){ return tr("cust."+key); }
+function taskLabel(t){
+  if(!t)return tr("tasks.work");
+  if(t.type==="deliver"&&t.ref&&t.ref.table) return `${tr("tasks.deliver")} T${t.ref.table.i+1}`;
+  return tr("tasks."+t.type);
+}
+function applyI18n(){
+  document.documentElement.lang=LANG==="zh"?"zh":"en";
+  const btn=$("#langToggle"); if(btn)btn.textContent=tr("ui.langBtn");
+  const chips=document.querySelectorAll("#hud .chip span");
+  ["lunch","sales","google","wait","turn"].forEach((k,i)=>{ if(chips[i])chips[i].textContent=tr("ui."+k); });
+  const goal=$("#goalRow"); if(goal)goal.childNodes[1].textContent=" "+tr("ui.goal")+" ";
+  const ticker=$("#tickerTxt"); if(ticker&&!tickerQ.length&&(!G||!G.running))ticker.textContent=tr("ui.welcome");
+  const ya=$("#yellowAlert"); if(ya)ya.textContent=tr("ui.yellow");
+  const ca=$("#chatAlert"); if(ca)ca.textContent=tr("msg.chatChip");
+  document.querySelector('.skill[data-sk="split"]').childNodes[1].textContent=tr("ui.split");
+  document.querySelector('.skill[data-sk="rush"]').childNodes[1].textContent=tr("ui.rush");
+  document.querySelector('.skill[data-sk="calm"]').childNodes[1].textContent=tr("ui.calm");
+  const start=$("#startBtn"); if(start)start.textContent=`${tr("ui.enter")} LV.${currentLevel}`;
+  const ribbon=document.querySelector("#startOv .ribbon h2"); if(ribbon)ribbon.textContent=tr("ui.heroSub");
+  document.querySelectorAll("#startOv .rule").forEach((el,i)=>el.textContent=tr("ui.r"+(i+1)));
+  const resultTitle=document.querySelector("#endOv .ribbon h1"); if(resultTitle)resultTitle.textContent=tr("ui.result");
+  const endSub=$("#endSub"); if(endSub&&(!G||!G.over))endSub.textContent=tr("ui.close");
+  const again=$("#againBtn"); if(again&&(!G||!G.over))again.textContent=tr("ui.again");
+  if(G){
+    G.levelName=levelName(G.level);
+    document.querySelectorAll(".station .lbl").forEach((el,i)=>{ if(STATIONS[i])el.textContent=tr("stations."+STATIONS[i].lbl); });
+    G.staff.forEach(s=>{
+      s.name=staffLabel(s.id);
+      s.role=staffLabel(s.id,"role");
+      const tag=s.el&&s.el.querySelector(".tag"); if(tag)tag.textContent=s.name;
+    });
+    G.groups.forEach(g=>{ const tag=g.el&&g.el.querySelector(".tag"); if(tag)tag.textContent=`${customerLabel(g.type.key)}×${g.size}`; });
+    G.tasks.forEach(t=>{ if(t.el){ const who=t.el.querySelector(".who"); t.el.innerHTML=`<span class="ico">${t.ico}</span>${taskLabel(t)}<span class="who">${who?who.textContent:""}</span>`; } });
+    G.tables.forEach(tb=>tb._bk=null);
+    renderBadges(); updateHUD(true);
+  }
+  renderLevelMenu();
+}
+document.getElementById("langToggle").addEventListener("pointerdown",e=>{
+  e.preventDefault();
+  LANG=LANG==="zh"?"en":"zh";
+  localStorage.setItem("hmfm_lang",LANG);
+  applyI18n();
+});
+
 /* ============================ CONFIG ============================ */
 const CFG = {
   duration: 360,            // 一关 6 分钟，节奏更从容
@@ -347,8 +538,8 @@ function renderLevelMenu(){
   if(!menu)return;
   menu.innerHTML=LEVELS.map((lv,i)=>{
     const n=i+1;
-    const tag=lv.restroom?" · 员工厕所30秒":lv.slackers?" · Son/Yu摆烂":"";
-    return `<button class="levelBtn ${n===currentLevel?"active":""}" data-level="${n}"><b>LV.${n} ${lv.name}</b><span>目标 RM ${lv.goal}${tag}</span></button>`;
+    const tag=lv.restroom?` · ${tr("ui.restroomTag")}`:lv.slackers?` · ${tr("ui.slackTag")}`:"";
+    return `<button class="levelBtn ${n===currentLevel?"active":""}" data-level="${n}"><b>LV.${n} ${levelName(n)}</b><span>${tr("ui.target")} RM ${lv.goal}${tag}</span></button>`;
   }).join("");
   menu.querySelectorAll(".levelBtn").forEach(btn=>btn.addEventListener("pointerdown",e=>{
     e.preventDefault();
@@ -356,10 +547,10 @@ function renderLevelMenu(){
     newGame(currentLevel);
     renderLevelMenu();
     const start=document.querySelector("#startBtn");
-    if(start)start.textContent=`进 入 LV.${currentLevel}`;
+    if(start)start.textContent=`${tr("ui.enter")} LV.${currentLevel}`;
   }));
   const start=document.querySelector("#startBtn");
-  if(start)start.textContent=`进 入 LV.${currentLevel}`;
+  if(start)start.textContent=`${tr("ui.enter")} LV.${currentLevel}`;
 }
 
 /* ============================ MapData ============================ */
@@ -381,12 +572,12 @@ const STATIONS = [
 ];
 
 const STAFF_DEF = [
-  {id:"host",   name:"Mou", role:"HOST",    ava:"🧑‍💼", speed:1.15, home:POS.host},
-  {id:"run",    name:"Rong",role:"RUNNER A",ava:"🏃",  speed:1.32, home:{x:7,y:14}},
-  {id:"rn2",    name:"Lin", role:"RUNNER B",ava:"🏃‍♂️", speed:1.25, home:{x:18,y:14}},
-  {id:"sa",     name:"Son", role:"SERVER A",ava:"👩‍🦰", speed:1.05, home:{x:38,y:13}},
-  {id:"sb",     name:"Yu",  role:"SERVER B",ava:"👧",  speed:1.05, home:{x:58,y:13}},
-  {id:"sc",     name:"Moi", role:"SERVER C",ava:"🧔",  speed:.9,  home:{x:90,y:66}, cleanBonus:1.35},
+  {id:"host",   ava:"🧑‍💼", speed:1.15, home:POS.host},
+  {id:"run",    ava:"🏃",  speed:1.32, home:{x:7,y:14}},
+  {id:"rn2",    ava:"🏃‍♂️", speed:1.25, home:{x:18,y:14}},
+  {id:"sa",     ava:"👩‍🦰", speed:1.05, home:{x:38,y:13}},
+  {id:"sb",     ava:"👧",  speed:1.05, home:{x:58,y:13}},
+  {id:"sc",     ava:"🧔",  speed:.9,  home:{x:90,y:66}, cleanBonus:1.35},
 ];
 
 /* ============================ SpriteSystem（像素小人） ============================ */
@@ -436,20 +627,20 @@ const CUST_SHIRTS=["#6b8e4e","#8f6b4e","#4e6b8f","#7a5d8f","#8f4e5e","#4e8f83"];
 function custPal(typeKey){
   const shirt=pick(CUST_SHIRTS);
   const base={H:pick(["#2b1c10","#1c1c1c","#4a2c14","#5c3a1c"]),S:Math.random()<.5?SKIN:SKIN2,T:shirt,A:shirt,P:"#3a3430",D:SHOE};
-  if(typeKey==="老人"){base.H="#cfcfcf";base.T="#6b705c";base.A="#6b705c";}
-  if(typeKey==="急性子"){base.T="#d97c2b";base.A="#b35f16";}
-  if(typeKey==="博主"){base.T="#d95d9e";base.A="#b3437e";}
-  if(typeKey==="VIP"){base.T="#26262c";base.A="#26262c";base.P="#1a1a20";}
+  if(typeKey==="elder"){base.H="#cfcfcf";base.T="#6b705c";base.A="#6b705c";}
+  if(typeKey==="rush"){base.T="#d97c2b";base.A="#b35f16";}
+  if(typeKey==="blogger"){base.T="#d95d9e";base.A="#b3437e";}
+  if(typeKey==="vip"){base.T="#26262c";base.A="#26262c";base.P="#1a1a20";}
   return base;
 }
 function sprImg(url,cls){ return url?`<img class="spr ${cls||""}" src="${url}" draggable="false">`:""; }
 
 const CUST_TYPES = [
-  {k:"普通", faces:["🚶","👫","👨‍👩‍👦","👨‍👩‍👧‍👦"], w:5},
-  {k:"急性子", faces:["😤","😤😤","😤😤🙂","😤😤🙂🙂"], w:2, pat:.65},
-  {k:"老人", faces:["👴","👴👵","👴👵🧓","👴👵🧓🧓"], w:2, eat:1.35},
-  {k:"博主", faces:["🤳","🤳💃","🤳💃🕺","🤳💃🕺🙂"], w:1, weight:2},
-  {k:"VIP",  faces:["🕴️","🕴️💼","🕴️💼🙂","🕴️💼🙂🙂"], w:1, weight:2, tip:1.5},
+  {key:"normal", faces:["🚶","👫","👨‍👩‍👦","👨‍👩‍👧‍👦"], w:5},
+  {key:"rush", faces:["😤","😤😤","😤😤🙂","😤😤🙂🙂"], w:2, pat:.65},
+  {key:"elder", faces:["👴","👴👵","👴👵🧓","👴👵🧓🧓"], w:2, eat:1.35},
+  {key:"blogger", faces:["🤳","🤳💃","🤳💃🕺","🤳💃🕺🙂"], w:1, weight:2},
+  {key:"vip",  faces:["🕴️","🕴️💼","🕴️💼🙂","🕴️💼🙂🙂"], w:1, weight:2, tip:1.5},
 ];
 
 /* ============================ State ============================ */
@@ -466,7 +657,7 @@ function newGame(level=currentLevel){
   applyLevel(currentLevel);
   const lv=getLevel(currentLevel);
   G = {
-    t:0, running:false, over:false, level:currentLevel, levelName:lv.name, levelPassed:false,
+    t:0, running:false, over:false, level:currentLevel, levelName:levelName(currentLevel), levelPassed:false,
     restroom:lv.restroom?{armed:true, active:false, done:false, at:rnd(95,165), staff:null, left:0}:null,
     slackers:!!lv.slackers,
     sales:0, served:0, complaints:0, sop:0, yellows:0, yellowBlown:0,
@@ -484,7 +675,7 @@ function newGame(level=currentLevel){
     const d=document.createElement("div");
     d.className="station"+(s.decor?" decor":"");
     d.style.left=s.p.x+"%"; d.style.top=s.p.y+"%";
-    d.innerHTML=`<div class="box">${s.ico}<span class="pileN" style="display:none"></span></div><span class="lbl">${s.lbl}</span>`;
+    d.innerHTML=`<div class="box">${s.ico}<span class="pileN" style="display:none"></span></div><span class="lbl">${tr("stations."+s.lbl)}</span>`;
     if(s.lbl==="BAR")pileEls.b=d.querySelector(".pileN");
     if(s.lbl==="CLEANING")pileEls.c=d.querySelector(".pileN");
     if(s.lbl==="HOST"||s.lbl==="CASHIER"){
@@ -492,7 +683,7 @@ function newGame(level=currentLevel){
       postEls[s.lbl==="HOST"?"host":"cash"]=d;
       d.addEventListener("pointerdown",e=>{
         e.stopPropagation();
-        hint(`把员工拖到这里 = 顶岗${s.lbl==="HOST"?"（自动带位守门）":"（自动结账）"}`);
+        hint(`${tr("msg.dragPost")}${s.lbl==="HOST"?tr("msg.hostPost"):tr("msg.cashPost")}`);
       });
     }
     map.appendChild(d);
@@ -514,9 +705,11 @@ function newGame(level=currentLevel){
     const el=document.createElement("div");
     el.className="pawn staff";
     const url=makeSprite(STAFF_PAL[d.id]);
-    el.innerHTML=`<div class="ava">${url?sprImg(url):d.ava}</div><span class="tag">${d.name}</span><div class="stbar"><i></i></div><div class="work" style="display:none"><i></i></div><span class="carry"></span>`;
+    const name=staffLabel(d.id);
+    const role=staffLabel(d.id,"role");
+    el.innerHTML=`<div class="ava">${url?sprImg(url):d.ava}</div><span class="tag">${name}</span><div class="stbar"><i></i></div><div class="work" style="display:none"><i></i></div><span class="carry"></span>`;
     map.appendChild(el);
-    const s={...d, x:d.home.x, y:d.home.y, el, spr:url, stamina:100, task:null, recall:null,
+    const s={...d, name, role, x:d.home.x, y:d.home.y, el, spr:url, stamina:100, task:null, recall:null,
       state:"idle", idleT:0, stunT:0, stunCd:0, wp:[], workT:0, workDur:0};
     el.addEventListener("pointerdown",e=>{e.stopPropagation();startDragCandidate(s,e);});
     G.staff.push(s);
@@ -541,7 +734,7 @@ function pop(x,y,txt,cls=""){
 function hint(t,sticky){
   const h=$("#hint"); h.textContent=t; h.style.opacity=1;
   clearTimeout(h._t);
-  if(!sticky) h._t=setTimeout(()=>{ if(!G||!G.selected) h.style.opacity=0; else if(G.selected) hint(`👆 已选 ${G.selected.name} — 点亮边的桌子派工`,true); },2200);
+  if(!sticky) h._t=setTimeout(()=>{ if(!G||!G.selected) h.style.opacity=0; else if(G.selected) hint(tr("msg.selected",{name:G.selected.name}),true); },2200);
 }
 function hideHint(){ const h=$("#hint"); clearTimeout(h._t); h.style.opacity=0; }
 
@@ -564,7 +757,7 @@ function killGhost(){
 }
 function startDragCandidate(s,e){
   if(!G.running)return;
-  if(isUnavailable(s)){ hint(s.offDuty>0?`${s.name} 去厕所了，还要 ${Math.ceil(s.offDuty)} 秒`:`${s.name} 摆烂中，本关不能派工`); return; }
+  if(isUnavailable(s)){ hint(s.offDuty>0?tr("msg.restroom",{name:s.name,sec:Math.ceil(s.offDuty)}):tr("msg.slacking",{name:s.name})); return; }
   if(e.preventDefault)e.preventDefault();        // 阻止长按存图/系统手势抢走指针
   if(drag&&drag.hover)drag.hover.el.classList.remove("dropHover");
   killGhost();                                    // 清理任何未收尾的旧拖拽
@@ -597,7 +790,7 @@ function endDrag(e,cancelled){
   if(d.hover)d.hover.el.classList.remove("dropHover");
   killGhost();
   if(cancelled)return;                            // pointercancel/失焦：只清理，不落子
-  if(!d.active){ hint(`把 ${d.staff.name} 拖到桌子 / 工单 / 岗位牌上`); return; }
+  if(!d.active){ hint(tr("msg.dragHint",{name:d.staff.name})); return; }
   if(d.hover)dropOn(d.staff,d.hover);
 }
 document.addEventListener("pointerup",e=>endDrag(e,false));
@@ -623,12 +816,12 @@ function dragHitTest(mx,my){
   return null;
 }
 function dropOn(s,h){
-  if(isUnavailable(s)){ hint(`${s.name} 暂时不能派工`); return; }
+  if(isUnavailable(s)){ hint(tr("msg.unavailable",{name:s.name})); return; }
   if(h.kind==="post"){
     if(s.task)unassign(s.task);
     breakChat(s);
     s.recall={x:h.pos.x,y:h.pos.y};
-    hint(`${s.name} 顶岗${h.key==="host"?"门口（自动带位）":"收银台（自动结账）"}`);
+    hint(tr("msg.post",{name:s.name,name2:h.key==="host"?tr("msg.postHost"):tr("msg.postCash")}));
     return;
   }
   if(h.kind==="chit"){
@@ -637,7 +830,7 @@ function dropOn(s,h){
     return;
   }
   const open=tasksForTable(h.tb).filter(t=>!t.assignee);
-  if(!open.length){ hint(`T${h.tb.i+1} 暂无可派工作`); return; }
+  if(!open.length){ hint(tr("msg.noTableWork",{n:h.tb.i+1})); return; }
   assign(s,open[0]);
   pop(h.tb.x,h.tb.y,`${s.name} → ${taskName(open[0])}`,"good");
 }
@@ -654,16 +847,16 @@ function moveToward(e,tx,ty,spd,dt){
   e.x+=dx/d*st; e.y+=dy/d*st; return false;
 }
 function breakChat(s){
-  if(G&&G.slackers&&isChatter(s)){ say("摆烂中：Son 和 Yu 本关不会听喊话"); return; }
+  if(G&&G.slackers&&isChatter(s)){ say(tr("msg.slackNoBreak")); return; }
   if(s.state==="chatting"){
     s.state="idle"; s.idleT=0;
     const mate=G.staff.find(o=>o!==s&&o.state==="chatting");
     if(mate){mate.state="idle";mate.idleT=0;}
-    say("💬 聊天被打散了，大家松了口气");
+    say(tr("msg.chatBreak"));
   }
 }
 function assign(s,task,auto){
-  if(isUnavailable(s)){ if(!auto)hint(`${s.name} 暂时不能派工`); return; }
+  if(isUnavailable(s)){ if(!auto)hint(tr("msg.unavailable",{name:s.name})); return; }
   if(s.task){ // 救火：放回旧任务
     unassign(s.task); 
   }
@@ -710,7 +903,7 @@ function rescueStuckStaff(s,dt){
   if(s.state==="moving"&&(!s.wp||!s.wp.length)) buildWaypoints(s,s.task);
   if((s.taskT||0)>55){
     const old=s.task;
-    say(`🛠️ ${s.name} 卡住了，系统已自动重派 ${taskName(old)}`);
+    say(tr("msg.stuck",{name:s.name,task:taskName(old)}));
     removeTask(old);
     return true;
   }
@@ -720,7 +913,7 @@ function staffTick(s,dt){
   if(s.offDuty>0){
     s.offDuty=Math.max(0,s.offDuty-dt);
     s.state="off";
-    if(s.offDuty<=0){ s.state="idle"; s.x=s.home.x; s.y=s.home.y; say(`🚻 ${s.name} 回来了，可以继续派工`); }
+    if(s.offDuty<=0){ s.state="idle"; s.x=s.home.x; s.y=s.home.y; say(tr("msg.returnToilet",{name:s.name})); }
     return;
   }
   if(G.slackers&&isChatter(s)){ s.state="chatting"; s.task=null; return; }
@@ -754,14 +947,14 @@ function addTask(t){
   }
   const el=document.createElement("div");
   el.className="chit pulse "+(t.cls||"");
-  el.innerHTML=`<span class="ico">${t.ico}</span>${t.label}<span class="who"></span>`;
+  el.innerHTML=`<span class="ico">${t.ico}</span>${taskLabel(t)}<span class="who"></span>`;
   el.style.left=(t.x+ (t.dx||0))+"%"; el.style.top=(t.y+(t.dy||0))+"%";
   el.addEventListener("pointerdown",e=>{
     e.stopPropagation();
     if(!G.running)return;
-    if(t.assignee){ hint("这张单已有人负责"); return; }
+    if(t.assignee){ hint(tr("msg.assigned")); return; }
     const s=nearestIdle(t.x,t.y,t.type==="checkout"||t.type==="seat");
-    if(!s){ hint("没有空闲员工了——拖忙碌员工过来救火"); return; }
+    if(!s){ hint(tr("msg.noIdle")); return; }
     assign(s,t,true);
     pop(t.x,t.y-3,`${s.name} → ${taskName(t)}`,"good");
   });
@@ -787,9 +980,9 @@ function tableTap(tb){
   const list=tasksForTable(tb);
   const open=list.filter(t=>!t.assignee);
   // 一键派工：就近空闲员工立刻上（连点四下 = 四人接力）
-  if(!open.length){ hint(list.length?`T${tb.i+1} 的工作都有人负责了`:`T${tb.i+1} 暂无工作`); return; }
+  if(!open.length){ hint(list.length?tr("msg.allAssigned",{n:tb.i+1}):tr("msg.noWork",{n:tb.i+1})); return; }
   const s=nearestIdle(tb.x,tb.y);
-  if(!s){ hint("没有空闲员工了——拖一个忙碌员工过来救火"); return; }
+  if(!s){ hint(tr("msg.noIdle")); return; }
   assign(s,open[0],true);
   pop(tb.x,tb.y,`${s.name} → ${taskName(open[0])}`,"good");
 }
@@ -805,7 +998,7 @@ function renderBadges(){
       const queued=list.filter(x=>x.assignee).length;
       const key="F|"+queued;
       if(key!==tb._bk){ tb._bk=key;
-        if(queued){ el.style.display="flex"; el.className="tbadge asg"; el.innerHTML=`<b>🤝</b><span>接力</span><i>${queued}</i>`; }
+        if(queued){ el.style.display="flex"; el.className="tbadge asg"; el.innerHTML=`<b>🤝</b><span>${tr("tasks.relay")}</span><i>${queued}</i>`; }
         else el.style.display="none";
       }
       return;
@@ -816,7 +1009,7 @@ function renderBadges(){
     if(key===tb._bk)return; tb._bk=key;
     el.style.display="flex";
     el.className="tbadge "+cls+(t.assignee?" asg":" pulse");
-    el.innerHTML=`<b>${t.ico}</b><span>${t.label}</span>`+(queued?`<i>${queued}</i>`:"");
+    el.innerHTML=`<b>${t.ico}</b><span>${taskLabel(t)}</span>`+(queued?`<i>${queued}</i>`:"");
   });
 }
 function removeTask(t){
@@ -850,7 +1043,7 @@ function taskStep(s,dt){
         const g=t.ref;
         if(g.state!=="waiting"&&g.state!=="wandering"){ removeTask(t); return; }
         const tb=G.tables.find(x=>x.state==="ready");
-        if(!tb){ hint("暂时没有 Ready 的桌子"); removeTask(t); return; }
+        if(!tb){ hint(tr("msg.noReady")); removeTask(t); return; }
         tb.state="reserved"; g.escort=s; g.table=tb; s.phase=1; s.wp=[{x:tb.x,y:tb.y}];
       }} else if(arriveWp()){
         seatGroup(t.ref,t.ref.table); removeTask(t);
@@ -858,7 +1051,7 @@ function taskStep(s,dt){
       break;}
     case "guide":{
       if(s.phase===0){ if(arriveWp()){ const g=t.ref; if(g.state!=="wandering"){removeTask(t);return;} g.escort=s; s.phase=1; s.wp=[{...POS.waiting}]; }}
-      else if(arriveWp()){ const g=t.ref; g.escort=null; g.state="waiting"; g.patience=Math.min(g.patienceMax,g.patience+10); say("🚶 乱入顾客被带回等位区"); removeTask(t); }
+      else if(arriveWp()){ const g=t.ref; g.escort=null; g.state="waiting"; g.patience=Math.min(g.patienceMax,g.patience+10); say(tr("msg.guideBack")); removeTask(t); }
       break;}
     case "deliver":{
       if(s.phase===0){ if(arriveWp()){ startWork(s,0.8); s.phase=1; } }
@@ -870,9 +1063,9 @@ function taskStep(s,dt){
       if(s.phase===0){ if(arriveWp()){ startWork(s, t.type==="helpQR"?2:2.6); s.phase=1; } }
       else { s.workT+=dt; if(s.workT>=s.workDur){
         const g=t.ref;
-        if(t.type==="helpQR"&&g.state==="qrStuck"){ placeOrder(g); pop(g.x,g.y,"扫码OK","good"); }
-        if(t.type==="soothe"){ g.sat=Math.min(100,g.sat+18); g.soothedAt=G.t; pop(g.x,g.y,"已安抚","good"); }
-        if(t.type==="complain"){ g.sat=Math.min(100,g.sat+28); g.complaining=false; pop(g.x,g.y,"化解投诉","good"); }
+        if(t.type==="helpQR"&&g.state==="qrStuck"){ placeOrder(g); pop(g.x,g.y,tr("msg.qrOk"),"good"); }
+        if(t.type==="soothe"){ g.sat=Math.min(100,g.sat+18); g.soothedAt=G.t; pop(g.x,g.y,tr("msg.soothed"),"good"); }
+        if(t.type==="complain"){ g.sat=Math.min(100,g.sat+28); g.complaining=false; pop(g.x,g.y,tr("msg.solved"),"good"); }
         removeTask(t);} }
       break;}
     case "pcPlates":{
@@ -913,7 +1106,7 @@ function taskStep(s,dt){
       else { s.workT+=dt; if(s.workT>=s.workDur){
         const k=t.type==="washC"?"c":"b";
         G.pile[k]=Math.max(0,G.pile[k]-6);
-        pop(t.x,t.y,k==="c"?"碗洗完了":"杯洗完了","good");
+        pop(t.x,t.y,k==="c"?tr("msg.dishWashed"):tr("msg.cupWashed"),"good");
         removeTask(t);
       } }
       break;}
@@ -944,10 +1137,10 @@ function dropAtStation(s,st){
   G.pile[st]++;
   if(s.stamina<20 && Math.random()<0.25){
     G.pile[st]++; s.stunT=1.5;
-    pop(s.x,s.y,"太累打翻了!","bad");
-    say(`💥 ${s.name} 累到手滑打翻，${st==="c"?"清洁站":"Bar台"}更乱了——该让TA歇歇`);
+    pop(s.x,s.y,tr("msg.spill"),"bad");
+    say(tr("msg.pileMess",{name:s.name,station:st==="c"?tr("stations.CLEANING"):tr("stations.BAR")}));
   }
-  if(G.pile[st]===8) say(st==="c"?"🧼 清洁站爆了！抹桌变慢，快派人洗碗":"🥤 Bar台杯子堆满！饮料停产，快派人洗杯");
+  if(G.pile[st]===8) say(st==="c"?tr("msg.cleanBurst"):tr("msg.barBurst"));
 }
 function stationTick(){
   if(G.pile.c>=5 && !G.tasks.some(t=>t.type==="washC"))
@@ -972,7 +1165,7 @@ function specialTick(dt){
       releaseStaff(s);
       s.offDuty=30;
       r.armed=false; r.active=true; r.done=true; r.staff=s.id; r.left=30;
-      say(`🚻 ${s.name} 去上厕所了，30 秒后回来！先重新调度其他员工`);
+      say(tr("msg.toiletLeave",{name:s.name}));
       pop(s.x,s.y,"🚻 30s","bad");
     }
   }
@@ -1027,9 +1220,9 @@ function spawnGroup(){
   el.className="pawn";
   const n=Math.min(size,2);
   let faces="";
-  for(let i=0;i<n;i++){ const u=makeSprite(custPal(type.k)); faces+= u?sprImg(u,"c"):""; }
+  for(let i=0;i<n;i++){ const u=makeSprite(custPal(type.key)); faces+= u?sprImg(u,"c"):""; }
   if(!faces) faces=type.faces[size-1];
-  el.innerHTML=`<div class="face">${faces}</div><span class="tag">${type.k}×${size}</span><div class="pbar"><i></i></div><span class="bub" style="display:none"></span>`;
+  el.innerHTML=`<div class="face">${faces}</div><span class="tag">${customerLabel(type.key)}×${size}</span><div class="pbar"><i></i></div><span class="bub" style="display:none"></span>`;
   map.appendChild(el); g.el=el;
   G.groups.push(g);
   // Host 在岗？
@@ -1038,18 +1231,18 @@ function spawnGroup(){
     const tb=pick(G.tables);
     g.tx=tb.x+rnd(-6,6); g.ty=tb.y+rnd(4,8);
     G.wanderIncidents++;
-    say("⚠️ 门口没人！顾客自己乱走进来了");
+    say(tr("msg.wander"));
     g.guideTask=addTask({type:"guide",ref:g,x:g.tx,y:g.ty,ico:"🙋",label:"劝导带回",cls:"warn"});
   } else {
     g.state="waiting";
   }
 }
 function weightedType(){
-  const boosts=G.level>=5?{"急性子":2.3,"博主":2.2,"VIP":2.1,"老人":1.2}:
-    G.level>=4?{"急性子":2,"博主":1.8,"VIP":1.7,"老人":1.15}:
-    G.level>=3?{"急性子":1.65,"博主":1.45,"VIP":1.35,"老人":1.1}:
-    G.level>=2?{"急性子":1.35,"博主":1.2,"VIP":1.15}:{};
-  const weight=t=>t.w*(boosts[t.k]||1);
+  const boosts=G.level>=5?{rush:2.3,blogger:2.2,vip:2.1,elder:1.2}:
+    G.level>=4?{rush:2,blogger:1.8,vip:1.7,elder:1.15}:
+    G.level>=3?{rush:1.65,blogger:1.45,vip:1.35,elder:1.1}:
+    G.level>=2?{rush:1.35,blogger:1.2,vip:1.15}:{};
+  const weight=t=>t.w*(boosts[t.key]||1);
   const tot=CUST_TYPES.reduce((a,t)=>a+weight(t),0); let r=Math.random()*tot;
   for(const t of CUST_TYPES){ if((r-=weight(t))<0)return t; } return CUST_TYPES[0];
 }
@@ -1075,12 +1268,12 @@ function placeOrder(g){
 function serveItem(g,kind){
   if(g.state!=="ordered")return;
   g.got[kind]=true;
-  if(kind==="b") pop(g.table.x,g.table.y,"🧋 饮料到","good");
+  if(kind==="b") pop(g.table.x,g.table.y,tr("msg.drinkArrive"),"good");
   if(!(g.got.k&&g.got.b)) return;   // 餐+饮都到齐才开吃
   g.delivered=true; g.state="eating";
   g.eatDur=(CFG.eatBase+g.size*CFG.eatPerHead)*(g.type.eat||1); g.eatT=0;
   const waited=G.t-g.orderAt;
-  if(waited<22){ g.sat=Math.min(100,g.sat+8); pop(g.x,g.y,"上菜快 +8","good"); }
+  if(waited<22){ g.sat=Math.min(100,g.sat+8); pop(g.x,g.y,tr("msg.fastServe"),"good"); }
   if(g.yellow){ g.table.el.classList.remove("yellow"); g.yellow=false; }
   G.tasks.filter(t=>t.type==="soothe"&&t.ref===g).forEach(removeTask);
   setBub(g,null);
@@ -1106,20 +1299,20 @@ function custTick(g,dt){
     case "waiting":{
       const s=waitingSlot(g); moveToward(g,s.x,s.y,CFG.custSpeed,dt);
       g.patience-=dt;
-      if(g.patience<=0){ leaveAngry(g,"等太久，客人走了"); }
+      if(g.patience<=0){ leaveAngry(g,tr("msg.waitLeave")); }
       break;}
     case "wandering":{
       if(g.escort){ g.x=g.escort.x+2.5; g.y=g.escort.y+3; break; }
       moveToward(g,g.tx,g.ty,CFG.custSpeed*0.9,dt);
       g.patience-=dt*1.3;
       // 撞人
-      G.staff.forEach(s=>{ if(s.state!=="idle"&&s.stunCd<=0&&dist(s,g)<6){ s.stunT=2; s.stunCd=5; pop(s.x,s.y,"撞到了! 晕2秒","bad"); say(`💥 ${s.name} 被乱入顾客挡住，Stun 2秒`);} });
-      if(g.patience<=0) leaveAngry(g,"乱入顾客没人理，走了");
+      G.staff.forEach(s=>{ if(s.state!=="idle"&&s.stunCd<=0&&dist(s,g)<6){ s.stunT=2; s.stunCd=5; pop(s.x,s.y,tr("msg.bump"),"bad"); say(tr("msg.bumpSay",{name:s.name}));} });
+      if(g.patience<=0) leaveAngry(g,tr("msg.wanderLeave"));
       break;}
     case "scanning":{
       g.scanT+=dt;
       if(g.scanT>=CFG.scanTime){
-        if(Math.random()<CFG.qrFailRate){ g.state="qrStuck"; setBub(g,"📵"); say(`📵 T${g.table.i+1} 扫码失败，需要帮助`);
+        if(Math.random()<CFG.qrFailRate){ g.state="qrStuck"; setBub(g,"📵"); say(tr("msg.qrFail",{n:g.table.i+1}));
           addTask({type:"helpQR",ref:g,x:g.table.x,y:g.table.y,ico:"📵",label:"扫码",cls:"warn"});
         } else placeOrder(g);
       }
@@ -1133,7 +1326,7 @@ function custTick(g,dt){
       g.eatT+=dt;
       if((g.eatT/g.eatDur>=CFG.precleanSafe)&&!g._cue){ g._cue=1; updateTableItems(g.table);
         addTask({type:"pcPlates",ref:g.table,x:g.table.x,y:g.table.y,dx:-8,ico:"🍽️",label:"预收",cls:"optional"});
-        pop(g.table.x,g.table.y,"可预收","good");
+        pop(g.table.x,g.table.y,tr("msg.precleanCue"),"good");
       }
       if(g.eatT>=g.eatDur) finishEating(g);
       break;}
@@ -1141,7 +1334,7 @@ function custTick(g,dt){
       const q=G.groups.filter(x=>x.state==="paying"), idx=q.indexOf(g);
       moveToward(g,POS.cashier.x-6-idx*6,POS.cashier.y+7,CFG.custSpeed,dt);
       g.patience-=dt*0.7;
-      if(g.patience<=-15) leaveAngry(g,"结账排太久，客人怒走");
+      if(g.patience<=-15) leaveAngry(g,tr("msg.payLeave"));
       break;}
     case "leaving":{
       if(moveToward(g,POS.entrance.x,POS.entrance.y+2,CFG.custSpeed*1.3,dt)) killGroup(g);
@@ -1150,7 +1343,7 @@ function custTick(g,dt){
   // 投诉触发
   if(!g.complaining && g.sat<25 && ["scanning","qrStuck","ordered","eating","paying"].includes(g.state)){
     g.complaining=true; G.complaints++;
-    say(`😡 ${g.type.k}顾客发火了！快去处理`);
+    say(tr("msg.angry",{type:customerLabel(g.type.key)}));
     const px=g.table?g.table.x:g.x, py=g.table?g.table.y:g.y;
     addTask({type:"complain",ref:g,x:px,y:py,dy:-5,ico:"😡",label:"投诉",cls:"bad"});
   }
@@ -1164,7 +1357,7 @@ function finishEating(g){
   const tb=g.table; tb.group=null;
   startAutoFlow(tb);
   if(!G.tasks.some(t=>t.type==="checkout"))
-    addTask({type:"checkout",ref:null,x:POS.cashier.x,y:POS.cashier.y,ico:"💳",label:"收银结账"});
+    addTask({type:"checkout",ref:null,x:POS.cashier.x,y:POS.cashier.y,ico:"💳",label:tr("msg.checkout")});
   // 移除残留 preclean 单
   G.tasks.filter(t=>t.type==="pcPlates"&&t.ref===tb).forEach(removeTask);
 }
@@ -1177,7 +1370,7 @@ function payGroup(g){
 }
 function leaveAngry(g,msg){
   if(g.state==="leaving")return;
-  say("💢 "+msg); G.complaints++;
+  say(tr("msg.angryPrefix")+msg); G.complaints++;
   pushReview(g,1);
   if(g.table){ g.table.el.classList.remove("yellow");
     if(g.table.group===g){g.table.group=null; startAutoFlow(g.table);}
@@ -1214,7 +1407,7 @@ function kitchenTick(dt){
     if(o.done)continue;
     if(!o.started){
       if(act[o.st]<slots[o.st]){ o.started=true;
-        if(o.st==="k"&&Math.random()<CFG.missOrderRate){ o.dur+=8; say(`🍳 厨房漏单！T${o.g.table.i+1} 出餐延迟`);} }
+        if(o.st==="k"&&Math.random()<CFG.missOrderRate){ o.dur+=8; say(tr("msg.kitchenMiss",{n:o.g.table.i+1}));} }
       else continue;
     }
     act[o.st]++;
@@ -1236,7 +1429,7 @@ function precleanDone(t){
   const tb=t.ref, g=tb.group;
   if(!g||g.state!=="eating"){ return; }
   tb.pcPlates=true;
-  pop(tb.x,tb.y,"预收成功 · 翻台跳步","good");
+  pop(tb.x,tb.y,tr("msg.precleanDone"),"good");
   updateTableItems(tb);
 }
 
@@ -1247,9 +1440,9 @@ const FLOW_META=[null,
 function startAutoFlow(tb){
   tb.state="flow"; tb.el.className="table dirty";
   tb.flowStart=G.t; tb.flowStepAt=G.t;
-  pop(tb.x,tb.y-5,"🔄 翻台开始！连点接力","combo");
+  pop(tb.x,tb.y-5,tr("msg.flowStart"),"combo");
   tb.flowStep = tb.pcPlates ? 1 : 0;
-  if(tb.flowStep>0) pop(tb.x,tb.y,`Pre Clean 跳步→从第${tb.flowStep+1}步开始`,"good");
+  if(tb.flowStep>0) pop(tb.x,tb.y,tr("msg.precleanSkip",{n:tb.flowStep+1}),"good");
   for(let s=tb.flowStep+1;s<=4;s++){
     const m=FLOW_META[s];
     addTask({type:"flow"+s,ref:tb,x:tb.x,y:tb.y,
@@ -1265,7 +1458,7 @@ function flowStepDone(tb,step,staff){
   if(nxt&&nxt.el) nxt.el.classList.remove("locked");
   // 接力 combo
   if(G.t-G.lastFlowDone<3 && G.lastFlowStaff && G.lastFlowStaff!==staff){
-    G.combo++; if(G.combo>=1) pop(tb.x,tb.y-6,`接力 ×${G.combo+1}!`,"combo");
+    G.combo++; if(G.combo>=1) pop(tb.x,tb.y-6,tr("msg.relayCombo",{n:G.combo+1}),"combo");
   } else G.combo=0;
   G.lastFlowDone=G.t; G.lastFlowStaff=staff;
   updateTableItems(tb); updateFlowTag(tb);
@@ -1306,11 +1499,11 @@ function yellowTick(){
     if(!g.yellow && w>CFG.yellowAt){
       g.yellow=true; G.yellows++;
       g.table.el.classList.add("yellow");
-      say(`🟨 黄单！T${g.table.i+1} 上菜超时，派人安抚 + 催厨房`);
+      say(tr("msg.yellow",{n:g.table.i+1}));
       addTask({type:"soothe",ref:g,x:g.table.x,y:g.table.y,dy:-5,ico:"🟨",label:"安抚",cls:"warn"});
     }
     if(g.yellow && w>CFG.blowUpAt && G.t-g.soothedAt>25){
-      G.yellowBlown++; leaveAngry(g,"黄单没人管，整桌怒走 + 差评");
+      G.yellowBlown++; leaveAngry(g,tr("msg.yellowLeave"));
       g.table.el.classList.remove("yellow");
     }
   });
@@ -1325,16 +1518,16 @@ function chatTick(dt){
     const mx=(POS.drink.x+POS.clean.x)/2, my=POS.drink.y+8;
     moveToward(a,mx-3,my,18,dt); moveToward(b,mx+3,my,18,dt);
     setChatBub(a,true); setChatBub(b,true);
-    chip.textContent="⚠️ Son 和 Yu 摆烂中 · 本关不能打散";
+    chip.textContent=tr("msg.slackChip");
     chip.style.display="block";
-    if(!G._slackWarn||G.t-G._slackWarn>14){ G._slackWarn=G.t; say("⚠️ LV.7：Son 和 Yu 摆烂，本关只能靠 4 名员工撑住"); }
+    if(!G._slackWarn||G.t-G._slackWarn>14){ G._slackWarn=G.t; say(tr("msg.slackWarn")); }
     return;
   }
-  chip.textContent="⚠️ 员工扎堆聊天 · 点此打散";
+  chip.textContent=tr("msg.chatChip");
   if(a.state==="chatting"&&b.state==="chatting"){
     const mx=(POS.drink.x+POS.clean.x)/2, my=POS.drink.y+8;
     moveToward(a,mx-3,my,20,dt); moveToward(b,mx+3,my,20,dt);
-    if(!G._chatWarn||G.t-G._chatWarn>6){ G._chatWarn=G.t; say("💬 Son 和 Yu 又聊起来了…其他人累得更快！"); }
+    if(!G._chatWarn||G.t-G._chatWarn>6){ G._chatWarn=G.t; say(tr("msg.chatWarn")); }
     setChatBub(a,true); setChatBub(b,true);
     chip.style.display="block";
     return;
@@ -1347,7 +1540,7 @@ function chatTick(dt){
 }
 $("#chatAlert").addEventListener("pointerdown",()=>{
   if(!G||!G.running)return;
-  if(G.slackers){ hint("LV.7 摆烂状态不能打散，只能重新调度其他员工"); return; }
+  if(G.slackers){ hint(tr("msg.slackHint")); return; }
   G.staff.forEach(s=>breakChat(s));
   $("#chatAlert").style.display="none";
 });
@@ -1362,8 +1555,8 @@ function pushReview(g,force){
   let stars=force|| (g.sat>=85?5:g.sat>=65?4:g.sat>=45?3:g.sat>=25?2:1);
   const n=(g.type.weight||1);
   for(let i=0;i<n;i++)G.reviews.push(stars);
-  if(stars<=2)say(`⭐ 收到 ${stars} 星差评（${g.type.k}）`);
-  else if(stars===5&&g.type.weight)say(`🌟 ${g.type.k}给了 5 星好评，权重×2！`);
+  if(stars<=2)say(tr("msg.badReview",{stars,type:customerLabel(g.type.key)}));
+  else if(stars===5&&g.type.weight)say(tr("msg.goodReview",{type:customerLabel(g.type.key)}));
 }
 function avgStars(){ return G.reviews.reduce((a,b)=>a+b,0)/G.reviews.length; }
 
@@ -1377,12 +1570,12 @@ document.querySelectorAll(".skill").forEach(el=>{
     G.skills[k]=SK[k].cd;
     if(k==="split"&&G.slackers){
       G.staff.forEach(s=>{ if(!isChatter(s)){ breakChat(s); s.stamina=Math.min(100,s.stamina+12); } });
-      say("🗣️ 主管喊话：其他人回神，Son 和 Yu 继续摆烂");
+      say(tr("msg.splitSlack"));
       return;
     }
-    if(k==="split"){ G.staff.forEach(s=>{breakChat(s); s.stamina=Math.min(100,s.stamina+12);}); say("🗣️ 主管喊话：都别聊了！全员回神 +体力"); }
-    if(k==="rush"){ G.boost=10; G.staff.forEach(s=>s.stamina=Math.max(5,s.stamina-12)); say("⚡ 全员冲刺 10 秒！（透支体力 -12）"); }
-    if(k==="calm"){ G.groups.forEach(g=>{g.patience=Math.min(g.patienceMax,g.patience+22);g.sat=Math.min(100,g.sat+10);}); say("🧯 主管逐桌打招呼，全场客人+耐心+满意度"); }
+    if(k==="split"){ G.staff.forEach(s=>{breakChat(s); s.stamina=Math.min(100,s.stamina+12);}); say(tr("msg.splitSay")); }
+    if(k==="rush"){ G.boost=10; G.staff.forEach(s=>s.stamina=Math.max(5,s.stamina-12)); say(tr("msg.rushSay")); }
+    if(k==="calm"){ G.groups.forEach(g=>{g.patience=Math.min(g.patienceMax,g.patience+22);g.sat=Math.min(100,g.sat+10);}); say(tr("msg.calmSay")); }
   });
 });
 function skillTick(dt){
@@ -1413,8 +1606,7 @@ function renderPawns(){
     t.el.style.left=t.ref.x+"%"; t.el.style.top=(t.ref.y-2)+"%"; }});
 }
 function taskName(t){
-  return {seat:"带位",guide:"劝导",deliver:"送餐",helpQR:"帮扫码",soothe:"安抚",complain:"处理投诉",
-    pcPlates:"预收盘",washC:"洗碗",washB:"洗杯",flow1:"收盘",flow2:"收杯",flow3:"抹桌",flow4:"ResetQR",checkout:"收银"}[t.type]||"工作";
+  return taskLabel(t);
 }
 function updateHUD(force){
   G.hudT-=1/60;
@@ -1443,13 +1635,13 @@ function updateHUD(force){
   });
   const tbEl=$("#taskbar");
   if(tbEl)tbEl.innerHTML=
-    `<span>🔄翻台 <b>${cnt.flow}</b></span><span>🍽️预收 <b>${cnt.pc}</b></span>`+
-    `<span class="${cnt.yel?'w':''}">🟨黄单 <b>${cnt.yel}</b></span>`+
-    `<span class="${cnt.cmp?'r':''}">😡投诉 <b>${cnt.cmp}</b></span>`+
-    `<span class="${cnt.qr?'w':''}">📵扫码 <b>${cnt.qr}</b></span>`;
+    `<span>🔄${tr("ui.taskFlow")} <b>${cnt.flow}</b></span><span>🍽️${tr("ui.taskPc")} <b>${cnt.pc}</b></span>`+
+    `<span class="${cnt.yel?'w':''}">🟨${tr("ui.taskYellow")} <b>${cnt.yel}</b></span>`+
+    `<span class="${cnt.cmp?'r':''}">😡${tr("ui.taskComplain")} <b>${cnt.cmp}</b></span>`+
+    `<span class="${cnt.qr?'w':''}">📵${tr("ui.taskQr")} <b>${cnt.qr}</b></span>`;
   const yel=G.groups.filter(g=>g.yellow&&!g.delivered&&g.table);
   const ya=$("#yellowAlert");
-  if(yel.length){ ya.style.display="block"; ya.textContent="🟨 YELLOW ORDER! "+yel.map(g=>"T"+(g.table.i+1)).join(" "); }
+  if(yel.length){ ya.style.display="block"; ya.textContent=tr("ui.yellow")+" "+yel.map(g=>"T"+(g.table.i+1)).join(" "); }
   else ya.style.display="none";
 }
 
@@ -1461,16 +1653,16 @@ function endGame(){
   const totalFlows=G.flows.E+G.flows.G+G.flows.N+G.flows.P;
   // 各项 0~5 星
   const S={
-    "销售 SALES": Math.min(5,G.sales/CFG.salesGoal*5),
-    "顾客满意 SATISFACTION": Math.max(0,(stars-1)/4*5),
-    "翻台 TURNOVER": Math.min(5,G.served/19*5),
-    "GOOGLE 评分": Math.max(0,(stars-1)/4*5),
-    "投诉控制 COMPLAINT": Math.max(0,5-G.complaints*0.8),
-    "SOP 合规": Math.max(0,5-G.sop),
-    "黄单处理 YELLOW": Math.max(0,5-G.yellowBlown*2-Math.max(0,G.yellows-4)*0.5),
-    "AUTO FLOW 效率": totalFlows?Math.max(0,Math.min(5,(G.flows.E*2+G.flows.G)/(totalFlows*2)*5+(G.flows.P?-1:0))):2.5,
-    "HOST 门口管理": Math.max(0,5-G.wanderIncidents*0.4),
-    "员工体力 ENERGY": avgSta/20,
+    [tr("score.sales")]: Math.min(5,G.sales/CFG.salesGoal*5),
+    [tr("score.sat")]: Math.max(0,(stars-1)/4*5),
+    [tr("score.turn")]: Math.min(5,G.served/19*5),
+    [tr("score.google")]: Math.max(0,(stars-1)/4*5),
+    [tr("score.complaint")]: Math.max(0,5-G.complaints*0.8),
+    [tr("score.sop")]: Math.max(0,5-G.sop),
+    [tr("score.yellow")]: Math.max(0,5-G.yellowBlown*2-Math.max(0,G.yellows-4)*0.5),
+    [tr("score.flow")]: totalFlows?Math.max(0,Math.min(5,(G.flows.E*2+G.flows.G)/(totalFlows*2)*5+(G.flows.P?-1:0))):2.5,
+    [tr("score.host")]: Math.max(0,5-G.wanderIncidents*0.4),
+    [tr("score.energy")]: avgSta/20,
   };
   const vals=Object.values(S);
   const total=vals.reduce((a,b)=>a+b,0)/vals.length/5*100;
@@ -1479,19 +1671,19 @@ function endGame(){
   const word={S:"LEGENDARY!",A:"EXCELLENT!",B:"GOOD JOB",C:"KEEP GOING",D:"ROUGH DAY"}[grade];
   $("#gradeBox").textContent=grade;
   $("#gradeWord").textContent=word;
-  $("#endSub").textContent=`LV.${G.level} ${G.levelName} · 总分 ${total.toFixed(0)} / 100 · ${G.levelPassed?"通关":"重试"}`;
+  $("#endSub").textContent=`LV.${G.level} ${G.levelName} · ${tr("ui.score")} ${total.toFixed(0)} / 100 · ${G.levelPassed?tr("ui.pass"):tr("ui.fail")}`;
   $("#scoreRows").innerHTML=Object.entries(S).map(([k,v])=>{
     const f=Math.max(0,Math.min(5,Math.round(v)));
     return `<div><span>${k}</span><span class="stars">${"★".repeat(f)}${"☆".repeat(5-f)}</span></div>`;
   }).join("");
   $("#endStats").innerHTML=`
-    <div>销售额<b>RM ${G.sales}</b></div><div>翻台组数<b>${G.served}</b></div>
-    <div>Google评分<b>${stars.toFixed(1)}★</b></div><div>投诉<b>${G.complaints}</b></div>
+    <div>${tr("ui.salesAmt")}<b>RM ${G.sales}</b></div><div>${tr("ui.served")}<b>${G.served}</b></div>
+    <div>Google<b>${stars.toFixed(1)}★</b></div><div>${tr("ui.complaints")}<b>${G.complaints}</b></div>
     <div>Auto Flow<b>E${G.flows.E} G${G.flows.G} N${G.flows.N} P${G.flows.P}</b></div>
-    <div>黄单/爆单<b>${G.yellows}/${G.yellowBlown}</b></div>
-    <div>顾客乱入<b>${G.wanderIncidents}</b></div><div>关卡<b>LV.${G.level} / ${LEVELS.length}</b></div>
-    <div>员工均体力<b>${avgSta.toFixed(0)}%</b></div><div>下一步<b>${G.levelPassed?(G.level<LEVELS.length?"下一关":"已通关"):"重试本关"}</b></div>`;
-  $("#againBtn").textContent=G.levelPassed&&G.level<LEVELS.length?"下 一 关":G.levelPassed?"再 挑 战":"重 试 本 关";
+    <div>${tr("ui.yellowBlown")}<b>${G.yellows}/${G.yellowBlown}</b></div>
+    <div>${tr("ui.wander")}<b>${G.wanderIncidents}</b></div><div>${tr("ui.level")}<b>LV.${G.level} / ${LEVELS.length}</b></div>
+    <div>${tr("ui.energy")}<b>${avgSta.toFixed(0)}%</b></div><div>${tr("ui.next")}<b>${G.levelPassed?(G.level<LEVELS.length?tr("ui.nextLevel"):tr("ui.cleared")):tr("ui.retry")}</b></div>`;
+  $("#againBtn").textContent=G.levelPassed&&G.level<LEVELS.length?tr("ui.nextLevel"):G.levelPassed?tr("ui.challenge"):tr("ui.retry");
   $("#endOv").style.display="flex";
 }
 
@@ -1525,7 +1717,7 @@ function loop(ts){
 function startGame(){
   $("#startOv").style.display="none";
   newGame(currentLevel); G.running=true;
-  say(`🔔 LV.${G.level} ${G.levelName} 开始！Lunch Rush 即将到来`);
+  say(tr("msg.startSay",{lv:G.level,name:G.levelName}));
 }
 let _started=false;
 ["pointerdown","click"].forEach(ev=>$("#startBtn").addEventListener(ev,()=>{ if(_started)return; _started=true; startGame(); }));
@@ -1533,10 +1725,10 @@ function againGame(){
   $("#endOv").style.display="none";
   if(G&&G.levelPassed) currentLevel = G.level<LEVELS.length ? G.level+1 : 1;
   _started=true; newGame(currentLevel); G.running=true;
-  say(`🔔 LV.${G.level} ${G.levelName} 开始！`);
+  say(tr("msg.restartSay",{lv:G.level,name:G.levelName}));
 }
 ["pointerdown","click"].forEach(ev=>$("#againBtn").addEventListener(ev,()=>againGame()));
-try{ newGame(); renderLevelMenu(); }catch(e){ window.dispatchEvent(new ErrorEvent("error",{message:"newGame失败: "+e.message})); }
+try{ newGame(); applyI18n(); }catch(e){ window.dispatchEvent(new ErrorEvent("error",{message:tr("msg.newGameFail")+": "+e.message})); }
 requestAnimationFrame(loop);
 
 </script>
