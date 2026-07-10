@@ -135,6 +135,13 @@ html,body{height:100%;overflow:hidden;background:var(--bg);
 .alertChip{position:absolute;z-index:22;font-size:10px;font-weight:800;border-radius:6px;padding:4px 8px;display:none;letter-spacing:.5px;box-shadow:0 3px 0 #000;border:2px solid var(--gold)}
 #yellowAlert{left:6px;top:6px;background:var(--amber);color:#4a3000}
 #chatAlert{right:6px;top:6px;background:var(--red);color:#ffe8c8;cursor:pointer;pointer-events:auto;animation:pulse2 .8s infinite}
+#eventLog{position:absolute;right:6px;top:38px;z-index:21;width:154px;display:none;background:rgba(26,16,8,.94);border:2px solid var(--gold);border-radius:7px;box-shadow:0 3px 0 #000;color:#f0e2c8;padding:4px 5px;pointer-events:none}
+#eventLog .ttl{display:flex;align-items:center;justify-content:space-between;color:var(--gold-bright);font-size:8px;font-weight:900;letter-spacing:1px;border-bottom:1px solid #503418;padding-bottom:2px;margin-bottom:2px}
+#eventLog .row{display:flex;align-items:center;gap:4px;min-height:17px;font-size:9.5px;line-height:1.1;color:#d8c49a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#eventLog .row b{font-size:12px;font-weight:400;width:15px;text-align:center;flex:0 0 15px}
+#eventLog .row.warn{color:#ffd88a}
+#eventLog .row.bad{color:#ff9d7e;animation:blinkc .65s infinite alternate}
+#eventLog .row.good{color:#8dffb0}
 @keyframes pulse2{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
 
 .pop{position:absolute;transform:translate(-50%,-50%);z-index:40;font-weight:900;font-size:12px;color:var(--gold-bright);text-shadow:1px 1px 0 #000,2px 2px 0 rgba(0,0,0,.5);animation:rise 1.3s forwards;pointer-events:none;white-space:nowrap}
@@ -268,6 +275,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);
     <div id="map"></div>
     <div class="alertChip" id="yellowAlert">🟨 YELLOW ORDER!</div>
     <div class="alertChip" id="chatAlert">⚠️ 员工扎堆聊天 · 点此打散</div>
+    <div id="eventLog"></div>
     <div id="hint" style="opacity:0"></div>
   </div>
   <div id="taskbar"></div>
@@ -353,7 +361,8 @@ const I18N = {
       salesAmt:"销售额", served:"翻台组数", complaints:"投诉", yellowBlown:"黄单/爆单",
       wander:"顾客乱入", level:"关卡", energy:"员工均体力",
       taskFlow:"翻台", taskPc:"预收", taskYellow:"黄单", taskComplain:"投诉", taskQr:"扫码",
-      tableReady:"空桌", tableScan:"扫码", tableWait:"等餐", tableEat:"用餐", tablePre:"可预收", tablePay:"结账", tableReset:"翻台"
+      tableReady:"空桌", tableScan:"扫码", tableWait:"等餐", tableEat:"用餐", tablePre:"可预收", tablePay:"结账", tableReset:"翻台",
+      eventLogTitle:"现场"
     },
     levels:["开张试营","周末午市","旅游团到店","雨天爆场","冠军午市","厕所危机","摆烂午市"],
     stations:{KITCHEN:"厨房",BAR:"吧台",CLEANING:"清洁站",CASHIER:"收银台",HOST:"迎宾岗",ENTRANCE:"入口",WAITING:"等位区"},
@@ -362,6 +371,16 @@ const I18N = {
       sa:{name:"Mika",role:"桌边服务"}, sb:{name:"Jojo",role:"桌边服务"}, sc:{name:"明叔",role:"翻台清洁"}
     },
     cust:{normal:"普通",rush:"急性子",elder:"老人",blogger:"博主",vip:"VIP"},
+    eventLog:{
+      rainSlip:"雨天滑倒",
+      tourGroup:"旅游团到店",
+      kitchenRush:"厨房爆单 {sec}s",
+      takeaway:"外卖插单未处理",
+      takeawayBusy:"外卖插单处理中",
+      vipArrival:"VIP 到店",
+      machineBreak:"饮料机故障",
+      machineFixed:"饮料机已修好"
+    },
     tasks:{seat:"带位",guide:"劝导",deliver:"送餐",helpQR:"帮扫码",soothe:"安抚",complain:"处理投诉",
       pcPlates:"预收盘",washC:"洗碗",washB:"洗杯",flow1:"①收盘",flow2:"②收杯",flow3:"③抹桌",flow4:"④Reset QR",checkout:"收银结账",
       takeaway:"外卖插单",fixMachine:"维修机器",work:"工作",relay:"接力"},
@@ -425,7 +444,8 @@ const I18N = {
       salesAmt:"Sales", served:"Tables Served", complaints:"Complaints", yellowBlown:"Yellow/Blown",
       wander:"Walk-ins", level:"Level", energy:"Avg Energy",
       taskFlow:"Reset", taskPc:"Pre-clear", taskYellow:"Yellow", taskComplain:"Complaint", taskQr:"QR",
-      tableReady:"Ready", tableScan:"QR", tableWait:"Waiting", tableEat:"Eating", tablePre:"Pre-clear", tablePay:"Paying", tableReset:"Reset"
+      tableReady:"Ready", tableScan:"QR", tableWait:"Waiting", tableEat:"Eating", tablePre:"Pre-clear", tablePay:"Paying", tableReset:"Reset",
+      eventLogTitle:"FLOOR"
     },
     levels:["Soft Opening","Weekend Lunch","Tour Group Rush","Rainy Full House","Champion Lunch","Toilet Crisis","Slack-Off Shift"],
     stations:{KITCHEN:"KITCHEN",BAR:"BAR",CLEANING:"CLEANING",CASHIER:"CASHIER",HOST:"HOST",ENTRANCE:"ENTRANCE",WAITING:"WAITING"},
@@ -434,6 +454,16 @@ const I18N = {
       sa:{name:"Mika",role:"Table Server"}, sb:{name:"Jojo",role:"Table Server"}, sc:{name:"Uncle Ming",role:"Reset Specialist"}
     },
     cust:{normal:"Regular",rush:"Impatient",elder:"Elder",blogger:"Blogger",vip:"VIP"},
+    eventLog:{
+      rainSlip:"Rain slip",
+      tourGroup:"Tour group",
+      kitchenRush:"Kitchen rush {sec}s",
+      takeaway:"Takeaway pending",
+      takeawayBusy:"Takeaway in progress",
+      vipArrival:"VIP arrived",
+      machineBreak:"Machine down",
+      machineFixed:"Machine fixed"
+    },
     tasks:{seat:"Seat",guide:"Guide Back",deliver:"Deliver",helpQR:"Help QR",soothe:"Soothe",complain:"Resolve Complaint",
       pcPlates:"Pre-clear",washC:"Wash Plates",washB:"Wash Cups",flow1:"①Plates",flow2:"②Cups",flow3:"③Wipe",flow4:"④Reset QR",checkout:"Checkout",
       takeaway:"Takeaway Rush",fixMachine:"Fix Machine",work:"Work",relay:"Relay"},
@@ -619,13 +649,13 @@ const CFG = {
 };
 const BASE_CFG = {...CFG};
 const LEVELS = [
-  {name:"开张试营", goal:1300, spawn:[9.5,8,10], maxWait:5, cfg:{}},
-  {name:"周末午市", goal:1580, spawn:[8.4,7.1,8.8], maxWait:5, cfg:{waitPatience:45, qrFailRate:.17, missOrderRate:.09, yellowAt:49, blowUpAt:80}},
-  {name:"旅游团到店", goal:1880, spawn:[7.5,6.1,8], maxWait:6, cfg:{waitPatience:41, scanTime:4.7, qrFailRate:.2, cookBase:13.2, missOrderRate:.11, yellowAt:45, blowUpAt:74}},
-  {name:"雨天爆场", goal:2200, spawn:[6.7,5.4,7.1], maxWait:6, cfg:{waitPatience:38, qrFailRate:.23, cookBase:14, barBase:5.8, missOrderRate:.13, yellowAt:42, blowUpAt:69, flowExcellent:10.5, flowGood:16.5, flowNormal:29}},
-  {name:"冠军午市", goal:2500, spawn:[6,4.9,6.5], maxWait:7, cfg:{waitPatience:35, scanTime:5, qrFailRate:.27, cookBase:15, barBase:6.2, kitchenSlots:3, missOrderRate:.15, yellowAt:39, blowUpAt:64, flowExcellent:9.5, flowGood:15, flowNormal:26}},
-  {name:"厕所危机", goal:2650, spawn:[6.2,5.1,6.8], maxWait:7, restroom:true, cfg:{waitPatience:36, scanTime:5, qrFailRate:.27, cookBase:15, barBase:6.2, kitchenSlots:3, missOrderRate:.15, yellowAt:40, blowUpAt:66, flowExcellent:10, flowGood:16, flowNormal:28}},
-  {name:"摆烂午市", goal:2350, spawn:[7,5.8,7.6], maxWait:6, slackers:true, cfg:{waitPatience:40, qrFailRate:.22, cookBase:14, barBase:5.8, kitchenSlots:4, missOrderRate:.12, yellowAt:44, blowUpAt:72, flowExcellent:11, flowGood:17, flowNormal:30}}
+  {name:"开张试营", goal:900, spawn:[11,9.4,11], maxWait:4, events:0, cfg:{waitPatience:58, qrFailRate:.08, missOrderRate:.03, yellowAt:60, blowUpAt:96, flowExcellent:14, flowGood:21, flowNormal:36}},
+  {name:"周末午市", goal:1000, spawn:[9.8,8.2,9.8], maxWait:5, events:1, eventDeck:["takeaway","vipArrival","rainSlip"], cfg:{waitPatience:53, qrFailRate:.12, missOrderRate:.06, yellowAt:55, blowUpAt:88, flowExcellent:13, flowGood:20, flowNormal:34}},
+  {name:"旅游团到店", goal:1100, spawn:[9.2,7.7,9.2], maxWait:6, events:2, eventDeck:["tourGroup","takeaway","vipArrival"], cfg:{waitPatience:52, scanTime:4.6, qrFailRate:.14, cookBase:12.4, missOrderRate:.07, yellowAt:53, blowUpAt:85, flowExcellent:12.8, flowGood:19.5, flowNormal:33}},
+  {name:"雨天爆场", goal:1250, spawn:[8.4,6.9,8.3], maxWait:6, events:2, eventDeck:["rainSlip","takeaway","machineBreak","kitchenRush"], cfg:{waitPatience:47, qrFailRate:.18, cookBase:13.2, barBase:5.4, missOrderRate:.09, yellowAt:49, blowUpAt:78, flowExcellent:11.8, flowGood:18.5, flowNormal:31}},
+  {name:"冠军午市", goal:1350, spawn:[7.8,6.4,7.7], maxWait:7, events:3, eventDeck:["kitchenRush","vipArrival","machineBreak","takeaway"], cfg:{waitPatience:45, scanTime:4.8, qrFailRate:.2, cookBase:13.8, barBase:5.7, kitchenSlots:3, missOrderRate:.1, yellowAt:47, blowUpAt:75, flowExcellent:11, flowGood:17.5, flowNormal:30}},
+  {name:"厕所危机", goal:1300, spawn:[8.1,6.7,8], maxWait:6, events:2, eventDeck:["takeaway","machineBreak","rainSlip"], restroom:true, cfg:{waitPatience:46, scanTime:4.8, qrFailRate:.19, cookBase:13.5, barBase:5.6, kitchenSlots:4, missOrderRate:.09, yellowAt:48, blowUpAt:78, flowExcellent:11.8, flowGood:18.5, flowNormal:31}},
+  {name:"摆烂午市", goal:1200, spawn:[8.9,7.3,8.7], maxWait:5, events:2, eventDeck:["takeaway","vipArrival","kitchenRush"], slackers:true, cfg:{waitPatience:49, qrFailRate:.16, cookBase:13, barBase:5.3, kitchenSlots:4, missOrderRate:.07, yellowAt:51, blowUpAt:82, flowExcellent:12.8, flowGood:19.5, flowNormal:33}}
 ];
 let currentLevel = 1;
 function getLevel(n=currentLevel){ return LEVELS[Math.max(0,Math.min(LEVELS.length-1,n-1))]; }
@@ -767,7 +797,7 @@ function newGame(level=currentLevel){
     spawnT:2.5, selected:null, boost:0, spawnPlan:lv.spawn, maxWait:lv.maxWait,
     pile:{c:0,b:0},
     skills:{split:0,rush:0,calm:0},
-    events:{deck:[], nextAt:rnd(38,72), fired:0, max:currentLevel>=5?4:currentLevel>=3?3:2},
+    events:{deck:[], pool:lv.eventDeck||RESTAURANT_EVENTS, log:[], nextAt:rnd(48,82), fired:0, max:lv.events??(currentLevel>=5?3:currentLevel>=3?2:1)},
     kitchenSurge:0, machineBroken:false,
     wanderIncidents:0, hudT:0,
   };
@@ -1285,6 +1315,7 @@ function taskStep(s,dt){
       else { s.workT+=dt; if(s.workT>=s.workDur){
         G.machineBroken=false;
         say(tr("msg.eventMachineFixed"));
+        addEventLog("machineFixed","good");
         pop(t.x,t.y,"OK","good");
         removeTask(t);
       } }
@@ -1353,7 +1384,8 @@ function specialTick(dt){
 /* ============================ RestaurantEvents ============================ */
 const RESTAURANT_EVENTS=["rainSlip","tourGroup","kitchenRush","takeaway","vipArrival","machineBreak"];
 function nextRestaurantEvent(){
-  if(!G.events.deck.length) G.events.deck=[...RESTAURANT_EVENTS].sort(()=>Math.random()-.5);
+  const pool=G.events.pool&&G.events.pool.length?G.events.pool:RESTAURANT_EVENTS;
+  if(!G.events.deck.length) G.events.deck=[...pool].sort(()=>Math.random()-.5);
   return G.events.deck.pop();
 }
 function restaurantEventTick(dt){
@@ -1365,6 +1397,41 @@ function restaurantEventTick(dt){
   G.events.fired++;
   G.events.nextAt=G.t+rnd(52,88);
 }
+function addEventLog(kind,cls=""){
+  if(!G||!G.events)return;
+  G.events.log.unshift({kind,cls,at:G.t,ttl:16});
+  G.events.log=G.events.log.slice(0,6);
+}
+function eventRow(kind,ico,cls,vars){
+  return {ico,cls:cls||"",text:tr("eventLog."+kind,vars)};
+}
+function eventRows(){
+  if(!G||!G.events)return [];
+  const rows=[];
+  if(G.kitchenSurge>0) rows.push(eventRow("kitchenRush","🍳","warn",{sec:Math.ceil(G.kitchenSurge)}));
+  const takeaway=G.tasks.find(t=>t.type==="takeaway");
+  if(takeaway) rows.push(eventRow(takeaway.assignee?"takeawayBusy":"takeaway","📦","warn"));
+  if(G.machineBroken) rows.push(eventRow("machineBreak","🛠️","bad"));
+  G.events.log.forEach(e=>{
+    if(G.t-e.at>e.ttl)return;
+    if((e.kind==="kitchenRush"&&G.kitchenSurge>0)||(e.kind==="takeaway"&&takeaway)||(e.kind==="machineBreak"&&G.machineBroken))return;
+    const meta={
+      rainSlip:["🌧️","bad"], tourGroup:["🚌","warn"], kitchenRush:["🍳","warn"],
+      takeaway:["📦","warn"], vipArrival:["⭐","good"], machineBreak:["🛠️","bad"], machineFixed:["✅","good"]
+    }[e.kind]||["⚠️",""];
+    rows.push(eventRow(e.kind,meta[0],e.cls||meta[1]));
+  });
+  return rows.slice(0,4);
+}
+function renderEventLog(){
+  const el=$("#eventLog");
+  if(!el)return;
+  const rows=eventRows();
+  if(!rows.length){ el.style.display="none"; el.innerHTML=""; return; }
+  el.style.display="block";
+  el.innerHTML=`<div class="ttl"><span>${tr("ui.eventLogTitle")}</span><span>${rows.length}</span></div>`+
+    rows.map(r=>`<div class="row ${r.cls}"><b>${r.ico}</b><span>${r.text}</span></div>`).join("");
+}
 function triggerRestaurantEvent(kind){
   if(kind==="rainSlip"){
     const cands=G.staff.filter(s=>!isUnavailable(s)&&s.stunT<=0);
@@ -1374,11 +1441,13 @@ function triggerRestaurantEvent(kind){
     s.stunT=2.6;
     s.stamina=Math.max(0,s.stamina-8);
     say(tr("msg.eventRain",{name:s.name}));
+    addEventLog("rainSlip","bad");
     pop(s.x,s.y,"SLIP","bad");
     return;
   }
   if(kind==="tourGroup"){
     say(tr("msg.eventTour"));
+    addEventLog("tourGroup","warn");
     spawnGroup({size:4,typeKey:"normal",forceWaiting:true});
     spawnGroup({size:4,typeKey:"elder",forceWaiting:true});
     if(G.level>=4) spawnGroup({size:3,typeKey:"blogger",forceWaiting:true});
@@ -1388,6 +1457,7 @@ function triggerRestaurantEvent(kind){
     G.kitchenSurge=20;
     G.cookQ.forEach(o=>{ if(o.st==="k"&&!o.done) o.dur+=4; });
     say(tr("msg.eventKitchenRush"));
+    addEventLog("kitchenRush","warn");
     pop(POS.kitchen.x,POS.kitchen.y,"RUSH","warn");
     return;
   }
@@ -1396,12 +1466,14 @@ function triggerRestaurantEvent(kind){
       addTask({type:"takeaway",x:POS.kitchen.x,y:POS.kitchen.y+7,ico:"📦",cls:"warn"});
     }
     say(tr("msg.eventTakeaway"));
+    addEventLog("takeaway","warn");
     sfx("warn");
     return;
   }
   if(kind==="vipArrival"){
     spawnGroup({size:2,typeKey:"vip",forceWaiting:true});
     say(tr("msg.eventVip"));
+    addEventLog("vipArrival","good");
     pop(POS.entrance.x,POS.entrance.y,"VIP","combo");
     return;
   }
@@ -1410,6 +1482,7 @@ function triggerRestaurantEvent(kind){
     G.machineBroken=true;
     addTask({type:"fixMachine",x:POS.drink.x,y:POS.drink.y+7,ico:"🛠️",cls:"bad"});
     say(tr("msg.eventMachineBreak"));
+    addEventLog("machineBreak","bad");
     sfx("bad");
   }
 }
@@ -1893,6 +1966,7 @@ function updateHUD(force){
   const ya=$("#yellowAlert");
   if(yel.length){ ya.style.display="block"; ya.textContent=tr("ui.yellow")+" "+yel.map(g=>"T"+(g.table.i+1)).join(" "); }
   else ya.style.display="none";
+  renderEventLog();
 }
 
 /* ============================ ScoreSystem ============================ */
